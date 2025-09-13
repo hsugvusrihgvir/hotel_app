@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- IDE / Editors ---
+# PyCharm
+.idea/
+# VSCode
+.vscode/
+*.code-workspace
+
+# --- Logs / temp ---
+*.log
+logs/
+.DS_Store
+Thumbs.db
+
+# --- Qt Designer generated files ---
+# если будете компилировать .ui → .py, лучше их игнорировать
+app/ui_py/
+
+# --- Config / secrets ---
+.env
+*.env
+
+# --- OS / misc ---
+~$*
