@@ -16,6 +16,87 @@
   <property name="layoutDirection">
    <enum>Qt::LayoutDirection::LeftToRight</enum>
   </property>
+  <property name="styleSheet">
+   <string notr="true">/* 
+   Palette:
+   - bg-dark      #171a1d
+   - panel        #20252a
+   - panel-2      #242a30
+   - text         #e8e6e3
+   - text-dim     #b8b4ae
+   - gold         #caa55b
+   - gold-dark    #9b7d3f
+   - emerald      #2e7d6b
+   - red          #c45b5b
+   - focus        #6fbfa7
+ */
+
+QMainWindow, QWidget#centralwidget {
+    background: #171a1d;
+    color: #e8e6e3;
+    font-family: &quot;Segoe UI&quot;, &quot;Inter&quot;, &quot;Roboto&quot;, Arial;
+    font-size: 14px;
+}
+
+/* Кнопки по умолчанию */
+QPushButton {
+    background: #242a30;
+    color: #e8e6e3;
+    border: 1px solid #323a42;
+    border-radius: 12px;
+    padding: 8px 16px;
+    min-height: 34px;
+}
+QPushButton:hover {
+    background: #2b3238;
+    border-color: #3a444e;
+}
+QPushButton:pressed {
+    background: #23292f;
+    border-color: #46525e;
+}
+QPushButton:disabled {
+    color: #7b7e82;
+    background: #1f2327;
+    border-color: #2a3036;
+}
+
+QPushButton#btnConnect,
+QPushButton#btnEnterData {
+    background: #2e7d6b;
+    border: 1px solid #2c6f60;
+}
+QPushButton#btnConnect:hover,
+QPushButton#btnEnterData:hover {
+    background: #338a76;
+    border-color: #2f7b6a;
+}
+QPushButton#btnConnect:pressed,
+QPushButton#btnEnterData:pressed {
+    background: #28715f;
+}
+
+QPushButton#btnCreateSchema,
+QPushButton#btnShowData {
+    background: #caa55b;
+    color: #171a1d;
+    border: 1px solid #9b7d3f;
+}
+QPushButton#btnCreateSchema:hover,
+QPushButton#btnShowData:hover {
+    background: #d6b473;
+}
+QPushButton#btnCreateSchema:pressed,
+QPushButton#btnShowData:pressed {
+    background: #b89149;
+}
+
+QPushButton#btnOpenLog, QPushButton#btnAbout, QPushButton#btnExit {
+    background: #242a30;
+}
+QPushButton#btnExit:hover { border-color: #c45b5b; color: #ffdddd; }
+</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
@@ -25,7 +106,7 @@
         <property name="minimumSize">
          <size>
           <width>225</width>
-          <height>0</height>
+          <height>52</height>
          </size>
         </property>
         <property name="maximumSize">
@@ -44,7 +125,7 @@
         <property name="minimumSize">
          <size>
           <width>225</width>
-          <height>0</height>
+          <height>52</height>
          </size>
         </property>
         <property name="maximumSize">
@@ -63,7 +144,7 @@
         <property name="minimumSize">
          <size>
           <width>225</width>
-          <height>0</height>
+          <height>52</height>
          </size>
         </property>
         <property name="maximumSize">
@@ -101,7 +182,7 @@
           <property name="minimumSize">
            <size>
             <width>300</width>
-            <height>50</height>
+            <height>52</height>
            </size>
           </property>
           <property name="text">
@@ -114,7 +195,7 @@
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>50</height>
+            <height>52</height>
            </size>
           </property>
           <property name="text">
@@ -127,7 +208,7 @@
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>50</height>
+            <height>52</height>
            </size>
           </property>
           <property name="text">
