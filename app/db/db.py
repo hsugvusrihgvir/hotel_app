@@ -14,20 +14,17 @@ class HotelDB:
     def create(self):
         if not self.conn or not self.cur:
             raise RuntimeError("Нет подключения к БД")
+        schema_path = Path(__file__).with_name("schema.sql")
         try:
-            schemaPath = Path(__file__).with_name("schema.sql")
-            with open(schemaPath, "r", encoding="utf-8") as f: # скрипт создания схемы их файла
+            with open(schema_path, "r", encoding="utf-8") as f:
                 sql = f.read()
-
-                sql = f.read()
-                for statement in sql.split(";"):
-                    stmt = statement.strip()
-                    if stmt:
-                        self.cur.execute(stmt + ";")
-                self.conn.commit()
-            print("Схема создана")
+            print(sql)
+            self.cur.execute(sql)
+            self.conn.commit()
+            return "OK"
         except Exception as e:
-            raise RuntimeError("Ошибка при создании схемы:", e)
+            self.conn.rollback()
+            raise RuntimeError(f"Ошибка при создании схемы: {e}")
 
     def connect(self):
         try:

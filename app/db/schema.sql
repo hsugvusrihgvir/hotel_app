@@ -3,7 +3,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'comfort_enum') THEN
         CREATE TYPE comfort_enum AS ENUM ('standard', 'semi_lux', 'lux');
     END IF;
-END$$;
+END
+$$ LANGUAGE plpgsql;
+
 
 CREATE TABLE IF NOT EXISTS clients (
   id SERIAL PRIMARY KEY,
