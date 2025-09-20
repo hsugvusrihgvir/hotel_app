@@ -71,22 +71,23 @@ class HotelDB:
             self.conn = None
 
     # записывает данные клиента из интерфейса
-    def enterDataClient(self, dct):
+    def enterDataClient(self, dct): # передается словарь с данными
         try:
             _ = self.pr_table("clients") # проверяем, что таблица есть
         except Exception as e:
             raise RuntimeError(e)
         if not _:
             raise RuntimeError("Таблицы не существует, создайте схему")
+        s = """
+                        INSERT INTO clients (last_name, first_name, patronymic, passport, comment, is_regular, registered)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s);
+                    """
         try:
-            self.cur.execute("""
-                INSERT INTO clients (last_name, first_name, patronymic, passport, comment, is_regular, registered)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (dct["last_name"], dct["first_name"], dct["patronymic"], dct["passport"], dct["comment"], dct["is_regular"], dct["registered"]))
+            self.cur.execute(s, (dct["last_name"], dct["first_name"], dct["patronymic"], dct["passport"], dct["comment"], dct["is_regular"], dct["registered"]))
             self.conn.commit() # фиксируем
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError("Ошибка при вставке", e)
+            raise RuntimeError("Ошибка при вставке: " + f"!{e}! ({s})")
 
     # записывает данные о номере
     def enterDataRooms(self, dct):
@@ -96,16 +97,16 @@ class HotelDB:
             raise RuntimeError(e)
         if not _:
             raise RuntimeError("Таблицы не существует, создайте схему")
-
+        s = """
+                        INSERT INTO rooms (room_number, capacity, comfort, price)
+                        VALUES (%s, %s, %s, %s);
+                    """
         try:
-            self.cur.execute("""
-                INSERT INTO rooms (room_number, capacity, comfort, price)
-                VALUES (%s, %s, %s, %s);
-            """, (dct["room_number"], dct["capacity"], dct["comfort"], dct["price"]))
+            self.cur.execute(s, (dct["room_number"], dct["capacity"], dct["comfort"], dct["price"]))
             self.conn.commit()  # фиксируем
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError("Ошибка при вставке", e)
+            raise RuntimeError("Ошибка при вставке: " + f"!{e}! ({s})")
 
     # записывает данные о заселении
     def enterDataStays(self, dct):
@@ -118,54 +119,71 @@ class HotelDB:
             raise RuntimeError("Таблицы не существует, создайте схему")
 
         # проверка существования клиента
-        self.cur.execute("SELECT id FROM clients WHERE id = %s;", (dct["client_id"],))
+        s = "SELECT id FROM clients WHERE id = %s;"
+        try:
+            self.cur.execute(s, (dct["client_id"],))
+        except Exception as e:
+            raise RuntimeError("Ошибка при проверке существования клиента: " + f"!{e}! ({s})")
         if not self.cur.fetchone():
             raise RuntimeError(f"Клиента с id={dct["client_id"]} не существует")
 
         # проверка существования комнаты
-        self.cur.execute("SELECT id FROM rooms WHERE id = %s;", (dct["room_id"],))
-        if not self.cur.fetchone():
-            raise RuntimeError(f"Комнаты с id={dct["room_id"]} не существует")
-
+        s = "SELECT id FROM rooms WHERE id = %s;"
         try:
-            self.cur.execute("""
+            self.cur.execute(s, (dct["room_id"],))
+        except Exception as e:
+            raise RuntimeError("Ошибка при проверке существования номера: " + f"!{e}! ({s})")
+        if not self.cur.fetchone():
+            raise RuntimeError(f"Номера с id={dct["room_id"]} не существует")
+
+        s = """
                 INSERT INTO stays (client_id, room_id, check_in, check_out, is_paid, note, status)
                 VALUES (%s, %s, %s, %s, %s, %s, %s);
-            """, (dct["client_id"], dct["room_id"], dct["check_in"], dct["check_out"], dct["is_paid"], dct["note"], dct["status"]))
+            """
+        try:
+            self.cur.execute(s, (dct["client_id"], dct["room_id"], dct["check_in"], dct["check_out"], dct["is_paid"], dct["note"], dct["status"]))
             self.conn.commit()  # фиксируем
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError("Ошибка при вставке", e)
+            raise RuntimeError("Ошибка при вставке: " + f"!{e}! ({s})")
 
 
     def find_clients(self):
-        self.cur.execute("""
+        s = """
             SELECT id, first_name, last_name, passport
             FROM clients
             ORDER BY last_name, first_name;
-        """)
-        rows = self.cur.fetchall()
-        out = []
-        for c in rows:
-            cid = c["id"] if isinstance(c, dict) else c[0]
-            fn = c["first_name"] if isinstance(c, dict) else c[1]
-            ln = c["last_name"] if isinstance(c, dict) else c[2]
-            pp = c["passport"] if isinstance(c, dict) else c[3]
-            out.append({"id": cid, "label": f"{ln} {fn} (паспорт {pp})"})
-        return out
+        """
+        try:
+            self.cur.execute(s)
+            rows = self.cur.fetchall()
+            out = []
+            for c in rows:
+                cid = c["id"] if isinstance(c, dict) else c[0]
+                fn = c["first_name"] if isinstance(c, dict) else c[1]
+                ln = c["last_name"] if isinstance(c, dict) else c[2]
+                pp = c["passport"] if isinstance(c, dict) else c[3]
+                out.append({"id": cid, "label": f"{ln} {fn} (паспорт {pp})"})
+            return out
+        except Exception as e:
+            raise RuntimeError("Ошибка при поиске клиентов: " + f"!{e}! ({s})")
 
     def find_rooms(self):
-        self.cur.execute("""
+        s ="""
             SELECT id, room_number, comfort, capacity
             FROM rooms
             ORDER BY room_number;
-        """)
-        rows = self.cur.fetchall()
-        out = []
-        for r in rows:
-            rid = r["id"] if isinstance(r, dict) else r[0]
-            rn = r["room_number"] if isinstance(r, dict) else r[1]
-            cm = r["comfort"] if isinstance(r, dict) else r[2]
-            cp = r["capacity"] if isinstance(r, dict) else r[3]
-            out.append({"id": rid, "label": f"Комната {rn} ({cm}, {cp} мест)"})
-        return out
+        """
+        try:
+            self.cur.execute(s)
+            rows = self.cur.fetchall()
+            out = []
+            for r in rows:
+                rid = r["id"] if isinstance(r, dict) else r[0]
+                rn = r["room_number"] if isinstance(r, dict) else r[1]
+                cm = r["comfort"] if isinstance(r, dict) else r[2]
+                cp = r["capacity"] if isinstance(r, dict) else r[3]
+                out.append({"id": rid, "label": f"Комната {rn} ({cm}, {cp} мест)"})
+            return out
+        except Exception as e:
+            raise RuntimeError("Ошибка при поиске комнат: " + f"!{e}! ({s})")

@@ -7,12 +7,17 @@ from PySide6.QtCore import Slot
 
 from app.ui.ui_main_window import Ui_MainWindow
 from db.db import HotelDB
+from log.log import HotelLog
+
+from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QUrl
 
 
 class MainWindow(QMainWindow):  # меню
     def __init__(self) -> None:
         super().__init__()
 
+        self.log = HotelLog()
         self.db = HotelDB() # создания объекта класса для взаимодействия с бд
         self.connected = False # подключение к бд изначально false
 
@@ -35,9 +40,11 @@ class MainWindow(QMainWindow):  # меню
 
     def _info(self, text: str) -> None: # открытие окна с передаваемой информацией
         QMessageBox.information(self, "Информация", text)
+        self.log.addInfo(text)
 
     def _error(self, text: str) -> None: # открытие окна с передаваемой ошибкой
         QMessageBox.critical(self, "Ошибка", text)
+        self.log.addError(text)
 
     @Slot()
     def on_connect(self) -> None:  # соединение с бд
@@ -72,9 +79,9 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload # данные из окна
                 self.db.enterDataClient(data) # передача данных в класс для работы с бд
-                self._info("Добавление клиента прошло успешно")
+                self._info(f"Добавление клиента {data["id"]} прошло успешно")
             except RuntimeError as e:
-                self._error(f"Не удалось добавить клиента:\n{e}")
+                self._error(f"Не удалось добавить клиента: {e}")
 
 
     @Slot()
@@ -85,7 +92,7 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload
                 self.db.enterDataRooms(data)
-                self._info("Добавление комнаты прошло успешно")
+                self._info(f"Добавление комнаты {data["id"]}прошло успешно")
             except RuntimeError as e:
                 self._error(f"Не удалось добавить комнату:\n{e}")
 
@@ -99,9 +106,9 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload
                 self.db.enterDataStays(data)
-                self._info("Добавление прошло успешно")
+                self._info(f"Добавление юронирования {data["id"]} прошло успешно")
             except RuntimeError as e:
-                self._error(f"Не удалось добавить:\n{e}")
+                self._error(f"Не удалось добавить: {e}")
 
 
     @Slot()
@@ -111,7 +118,11 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_open_log(self) -> None: # открыть лог файл
-        pass
+        try:
+            path = self.log.FILE
+            QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        except Exception as e:
+            self._error(f"Не удалось открыть лог-файл: {e}")
 
 
     @Slot()
@@ -124,7 +135,7 @@ class MainWindow(QMainWindow):  # меню
                 self.db.close()
                 self.connected = False
         except Exception as e:
-            print(f"Ошибка при закрытии БД: {e}")
+            self._error(f"Ошибка при закрытии БД: {e}")
         finally:
             super().closeEvent(event)
 
