@@ -1,3 +1,5 @@
+from ui.ui_enter_data_dialog import EnterDataDialog # открытие, диалоговое окно с выбором режима
+
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QMessageBox, QFileDialog,
 )
@@ -11,32 +13,37 @@ class MainWindow(QMainWindow):  # меню
     def __init__(self) -> None:
         super().__init__()
 
-        self.db = HotelDB()
-        self.connected = False # подключение к бд
+        self.db = HotelDB() # создания объекта класса для взаимодействия с бд
+        self.connected = False # подключение к бд изначально false
 
-        self.ui = Ui_MainWindow()
+        self.ui = Ui_MainWindow() # создание объекта меню
         self.ui.setupUi(self)
 
-        self.ui.btnConnect.clicked.connect(self.on_connect) # соединение
-        self.ui.btnCreateSchema.clicked.connect(self.on_create_schema) # создать схему
+        # подключение кнопок для
+        self.ui.btnConnect.clicked.connect(self.on_connect) # соединение с бд
+        self.ui.btnCreateSchema.clicked.connect(self.on_create_schema) #  создание схемы
         self.ui.btnShowData.clicked.connect(self.on_show_data) # показать данные
-        self.ui.btnEnterData.clicked.connect(self.on_enter_data) # ввсти данные
+
+        self.ui.btnAddClient.clicked.connect(self.on_add_client) # добавление клиента
+        self.ui.btnAddRoom.clicked.connect(self.on_add_room) # добавление комнаты
+        self.ui.btnAddStays.clicked.connect(self.on_add_stays) # ввсти данные
+
         self.ui.btnUpdate.clicked.connect(self.on_update) # обновить
         self.ui.btnOpenLog.clicked.connect(self.on_open_log) # открыть лог файл
         self.ui.btnAbout.clicked.connect(self.on_about) # о приложении
         self.ui.btnExit.clicked.connect(self.close) # закрыть
 
-    def _info(self, text: str) -> None: # открытие окна с информацией
+    def _info(self, text: str) -> None: # открытие окна с передаваемой информацией
         QMessageBox.information(self, "Информация", text)
 
-    def _error(self, text: str) -> None: # открытие окна с ошибкой
+    def _error(self, text: str) -> None: # открытие окна с передаваемой ошибкой
         QMessageBox.critical(self, "Ошибка", text)
 
     @Slot()
-    def on_connect(self) -> None:  # соединение
+    def on_connect(self) -> None:  # соединение с бд
         try:
             self.db.connect()
-            self.connected = True
+            self.connected = True # подключение успешно
             self._info("Подключение к базе данных установлено.")
         except RuntimeError as e:
             self.connected = False
@@ -45,7 +52,7 @@ class MainWindow(QMainWindow):  # меню
     @Slot()
     def on_create_schema(self) -> None: # создать схему
         try:
-            self.db.create()
+            self.db.create() # создание схемы (таблиц)
             self._info("Создание схемы прошло успешно")
         except RuntimeError as e:
             self._error(f"Не удалось создать схему:\n{e}")
@@ -58,8 +65,43 @@ class MainWindow(QMainWindow):  # меню
 
 
     @Slot()
-    def on_enter_data(self) -> None:  # ввести данные
-        pass
+    def on_add_client(self) -> None:  # ввести данные
+        dlg = EnterDataDialog(self)  # открытие диалогового окна для ввода данных
+        dlg.setMode(EnterDataDialog.MODE_CLIENT) # выбор режима (данные для клиента, комнаты или бронирования)
+        if dlg.exec(): # при закрытии
+            try:
+                data = dlg.payload # данные из окна
+                self.db.enterDataClient(data) # передача данных в класс для работы с бд
+                self._info("Добавление клиента прошло успешно")
+            except RuntimeError as e:
+                self._error(f"Не удалось добавить клиента:\n{e}")
+
+
+    @Slot()
+    def on_add_room(self) -> None:  # аналогично
+        dlg = EnterDataDialog(self)
+        dlg.setMode(EnterDataDialog.MODE_ROOM)
+        if dlg.exec():
+            try:
+                data = dlg.payload
+                self.db.enterDataRooms(data)
+                self._info("Добавление комнаты прошло успешно")
+            except RuntimeError as e:
+                self._error(f"Не удалось добавить комнату:\n{e}")
+
+    @Slot()
+    def on_add_stays(self) -> None:  # аналогично
+        clients = self.db.find_clients()
+        rooms = self.db.find_rooms()
+        dlg = EnterDataDialog(self, clients=clients, rooms=rooms)
+        dlg.setMode(EnterDataDialog.MODE_STAY)
+        if dlg.exec():
+            try:
+                data = dlg.payload
+                self.db.enterDataStays(data)
+                self._info("Добавление прошло успешно")
+            except RuntimeError as e:
+                self._error(f"Не удалось добавить:\n{e}")
 
 
     @Slot()

@@ -26,6 +26,18 @@ class Ui_MainWindow(object):
         MainWindow.resize(800, 600)
         MainWindow.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         MainWindow.setStyleSheet(u"/* \n"
+"   Palette:\n"
+"   - bg-dark      #171a1d\n"
+"   - panel        #20252a\n"
+"   - panel-2      #242a30\n"
+"   - text         #e8e6e3\n"
+"   - text-dim     #b8b4ae\n"
+"   - gold         #caa55b\n"
+"   - gold-dark    #9b7d3f\n"
+"   - emerald      #2e7d6b\n"
+"   - red          #c45b5b\n"
+"   - focus        #6fbfa7\n"
+" */\n"
 "\n"
 "QMainWindow, QWidget#centralwidget {\n"
 "    background: #171a1d;\n"
@@ -138,12 +150,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.btnShowData)
 
-        self.btnEnterData = QPushButton(self.centralwidget)
-        self.btnEnterData.setObjectName(u"btnEnterData")
-        self.btnEnterData.setMinimumSize(QSize(0, 52))
-
-        self.verticalLayout_3.addWidget(self.btnEnterData)
-
         self.btnUpdate = QPushButton(self.centralwidget)
         self.btnUpdate.setObjectName(u"btnUpdate")
         self.btnUpdate.setMinimumSize(QSize(0, 52))
@@ -152,6 +158,31 @@ class Ui_MainWindow(object):
 
 
         self.horizontalLayout_3.addLayout(self.verticalLayout_3)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.btnAddClient = QPushButton(self.centralwidget)
+        self.btnAddClient.setObjectName(u"btnAddClient")
+        self.btnAddClient.setMinimumSize(QSize(0, 52))
+
+        self.verticalLayout.addWidget(self.btnAddClient)
+
+        self.btnAddRoom = QPushButton(self.centralwidget)
+        self.btnAddRoom.setObjectName(u"btnAddRoom")
+
+        self.verticalLayout.addWidget(self.btnAddRoom)
+
+        self.btnAddStays = QPushButton(self.centralwidget)
+        self.btnAddStays.setObjectName(u"btnAddStays")
+
+        self.verticalLayout.addWidget(self.btnAddStays)
+
+
+        self.horizontalLayout_3.addLayout(self.verticalLayout)
 
         self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -195,8 +226,10 @@ class Ui_MainWindow(object):
         self.btnAbout.setText(QCoreApplication.translate("MainWindow", u"\u041e \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0435", None))
         self.btnOpenLog.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043b\u043e\u0433-\u0444\u0430\u0439\u043b", None))
         self.btnShowData.setText(QCoreApplication.translate("MainWindow", u"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435", None))
-        self.btnEnterData.setText(QCoreApplication.translate("MainWindow", u"\u0412\u043d\u0435\u0441\u0442\u0438 \u0434\u0430\u043d\u043d\u044b\u0435", None))
         self.btnUpdate.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c", None))
+        self.btnAddClient.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043b\u0438\u0435\u043d\u0442\u0430", None))
+        self.btnAddRoom.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043d\u043e\u043c\u0435\u0440", None))
+        self.btnAddStays.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u0438\u0435", None))
         self.btnConnect.setText(QCoreApplication.translate("MainWindow", u"\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u0442\u0441\u044f", None))
         self.btnCreateSchema.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0441\u0445\u0435\u043c\u0443", None))
     # retranslateUi
