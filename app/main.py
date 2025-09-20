@@ -4,7 +4,7 @@ from main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    w = MainWindow()
+    w = MainWindow() # создание меню
     w.setWindowTitle("Гостиница")
     w.show()
     sys.exit(app.exec())

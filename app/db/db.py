@@ -12,15 +12,15 @@ class HotelDB:
         self.cur = None
 
     def create(self):
-        if not self.conn or not self.cur:
+        if not self.conn or not self.cur: # проверяем подключение
             raise RuntimeError("Нет подключения к БД")
         schema_path = Path(__file__).with_name("schema.sql")
         try:
             with open(schema_path, "r", encoding="utf-8") as f:
-                sql = f.read()
+                sql = f.read() # из файла
             print(sql)
             self.cur.execute(sql)
-            self.conn.commit()
+            self.conn.commit() # выполняем
             return "OK"
         except Exception as e:
             self.conn.rollback()
@@ -31,7 +31,7 @@ class HotelDB:
             load_dotenv()
 
             DB_NAME = "hotel_db"
-            DB_USER = os.getenv("DB_USER") # из .env, подставьте туда свои данные
+            DB_USER = os.getenv("DB_USER")
             DB_PASS = os.getenv("DB_PASS")
             DB_HOST = os.getenv("DB_HOST")
             DB_PORT = os.getenv("DB_PORT")
@@ -53,7 +53,7 @@ class HotelDB:
         if not self.conn or not self.cur:
             raise RuntimeError("Нет подключения к БД")
 
-        self.cur.execute("""
+        self.cur.execute("""  
                     SELECT EXISTS (
                         SELECT FROM information_schema.tables
                         WHERE table_schema = 'public' AND table_name = %s

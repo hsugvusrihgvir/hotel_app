@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   id SERIAL PRIMARY KEY,
   room_number INT UNIQUE NOT NULL,
   capacity INT NOT NULL CHECK (capacity > 0),
-  comfort comfort_enum NOT NULL
+  comfort comfort_enum NOT NULL,
+  price NUMERIC(10,2) NOT NULL CHECK (price > 0)
 );
 
 CREATE TABLE IF NOT EXISTS stays (
