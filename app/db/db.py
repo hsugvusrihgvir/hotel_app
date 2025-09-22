@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import sql, errors
 
 import os
 from dotenv import load_dotenv
@@ -11,7 +12,15 @@ class HotelDB:
         self.conn = None
         self.cur = None
 
-    def create(self):
+        load_dotenv(encoding='utf-8')
+
+        self.DB_NAME = "hotel_db" # имя бд
+        self.DB_USER = os.getenv("DB_USER")
+        self.DB_PASS = os.getenv("DB_PASS")
+        self.DB_HOST = os.getenv("DB_HOST")
+        self.DB_PORT = os.getenv("DB_PORT")
+
+    def create(self): # создание схемы
         if not self.conn or not self.cur: # проверяем подключение
             raise RuntimeError("Нет подключения к БД")
         schema_path = Path(__file__).with_name("schema.sql")
@@ -26,26 +35,18 @@ class HotelDB:
             self.conn.rollback()
             raise RuntimeError(f"Ошибка при создании схемы: {e}")
 
-    def connect(self):
+    def connect(self): # подключение к бд
         try:
-            load_dotenv()
-
-            DB_NAME = "hotel_db"
-            DB_USER = os.getenv("DB_USER")
-            DB_PASS = os.getenv("DB_PASS")
-            DB_HOST = os.getenv("DB_HOST")
-            DB_PORT = os.getenv("DB_PORT")
-
-            # подключение
             self.conn = psycopg2.connect(
-                dbname=DB_NAME,
-                user=DB_USER,
-                password=DB_PASS,
-                host=DB_HOST,
-                port=DB_PORT
+                dbname=self.DB_NAME,
+                user=self.DB_USER,
+                password=self.DB_PASS,
+                host=self.DB_HOST,
+                port=self.DB_PORT,
             )
             self.cur = self.conn.cursor()
-            print("Подключение успешно")
+            self.cur.execute("SET client_encoding TO 'UTF8';")
+            print(f"Подключение к {self.DB_NAME} успешно")
         except Exception as e:
             raise RuntimeError(f"Ошибка подключения к БД: {e}")
 

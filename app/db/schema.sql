@@ -32,5 +32,8 @@ CREATE TABLE IF NOT EXISTS stays (
   room_id INT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
   check_in DATE NOT NULL,
   check_out DATE NOT NULL,
+  is_paid BOOLEAN NOT NULL DEFAULT false,
+  note TEXT,
+  status BOOLEAN NOT NULL DEFAULT true,
   CONSTRAINT ck_dates CHECK (check_out > check_in)
 );
