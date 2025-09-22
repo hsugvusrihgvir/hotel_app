@@ -5,12 +5,16 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
+from app.log.log import HotelLog
+
 
 
 class HotelDB:
     def __init__(self):
         self.conn = None
         self.cur = None
+
+        self.log = HotelLog()
 
         load_dotenv(encoding='utf-8')
 
@@ -20,23 +24,50 @@ class HotelDB:
         self.DB_HOST = os.getenv("DB_HOST")
         self.DB_PORT = os.getenv("DB_PORT")
 
+    # преобразует ошибки в понятный человеку язык
+    def _friendly_db_error(self, e: Exception):
+        if isinstance(e, errors.UniqueViolation):
+            return "Нарушение уникальности: запись с такими уникальными данными уже существует (UNIQUE)."
+        if isinstance(e, errors.NotNullViolation):
+            return "Нарушение NOT NULL: заполните все обязательные поля."
+        if isinstance(e, errors.CheckViolation):
+            return "Нарушение CHECK: проверьте правила (например, датa выезда > даты заезда; вместимость > 0; не более 10 удобств)."
+        if isinstance(e, errors.ForeignKeyViolation):
+            return "Нарушение внешнего ключа: связанный объект не существует (проверьте клиента/номер)."
+        if isinstance(e, errors.InvalidTextRepresentation):
+            return "Ошибка типов: неверный формат значения (например, ENUM или DATE)."
+        if isinstance(e, errors.NumericValueOutOfRange):
+            return "Ошибка диапазона чисел: значение слишком велико/мало."
+        if isinstance(e, errors.StringDataRightTruncation):
+            return "Строка слишком длинная для этого поля."
+        if isinstance(e, psycopg2.OperationalError):
+            return "Ошибка подключения к базе: проверьте хост/порт/логин/пароль и наличие базы данных."
+        if isinstance(e, psycopg2.DataError):
+            return "Ошибка данных: значение не соответствует ожидаемому типу."
+
+        return f"Ошибка БД: {str(e)}"
+
     def create(self): # создание схемы
+        self.log.addInfo("Проверка подключения к БД...")
         if not self.conn or not self.cur: # проверяем подключение
-            raise RuntimeError("Нет подключения к БД")
+            raise RuntimeError("Нет подключения к БД. Проверьте хост/порт/логин/пароль и наличие базы данных.")
         schema_path = Path(__file__).with_name("schema.sql")
         try:
+            self.log.addInfo("Создание схемы БД...")
             with open(schema_path, "r", encoding="utf-8") as f:
                 sql = f.read() # из файла
-            print(sql)
             self.cur.execute(sql)
             self.conn.commit() # выполняем
+            self.log.addInfo("Схема БД создана")
             return "OK"
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError(f"Ошибка при создании схемы: {e}")
+            self.log.addError(e)
+            raise RuntimeError(f"Ошибка при создании схемы: {self._friendly_db_error(e)}")
 
     def connect(self): # подключение к бд
         try:
+            self.log.addInfo(f"Подключение к Бк {self.DB_NAME}...")
             self.conn = psycopg2.connect(
                 dbname=self.DB_NAME,
                 user=self.DB_USER,
@@ -46,9 +77,12 @@ class HotelDB:
             )
             self.cur = self.conn.cursor()
             self.cur.execute("SET client_encoding TO 'UTF8';")
+            self.log.addInfo(f"Подключение к {self.DB_NAME} успешно")
             print(f"Подключение к {self.DB_NAME} успешно")
         except Exception as e:
-            raise RuntimeError(f"Ошибка подключения к БД: {e}")
+            self.log.addError(e)
+            raise RuntimeError(f"Ошибка подключения к БД: {self._friendly_db_error(e)}")
+
 
     def pr_table(self, title): # проверяет есть ли таблица
         if not self.conn or not self.cur:
@@ -64,15 +98,18 @@ class HotelDB:
         return bool(exists)
 
     def close(self): # закрыть соединение
+        self.log.addInfo(f"Закрытие подключения к БД...")
         if self.cur is not None:
             self.cur.close()
             self.cur = None
         if self.conn is not None:
             self.conn.close()
             self.conn = None
+        self.log.addInfo(f"Подключение к БД закрыто")
 
     # записывает данные клиента из интерфейса
     def enterDataClient(self, dct): # передается словарь с данными
+        self.log.addInfo(f"Записываются данные клиента...")
         try:
             _ = self.pr_table("clients") # проверяем, что таблица есть
         except Exception as e:
@@ -86,22 +123,25 @@ class HotelDB:
         try:
             self.cur.execute(s, (dct["last_name"], dct["first_name"], dct["patronymic"], dct["passport"], dct["comment"], dct["is_regular"], dct["registered"]))
             self.conn.commit() # фиксируем
+            self.log.addInfo(f"Данные добавлены")
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError("Ошибка при вставке: " + f"!{e}! ({s})")
+            self.log.addError(str(e) + '\n\t' + s + '\n')
+            raise RuntimeError("Ошибка при вставке: " + self._friendly_db_error(e))
 
     # записывает данные о номере
     def enterDataRooms(self, dct):
+        self.log.addInfo(f"Записываются данные номера...")
         try:
             _ = self.pr_table("rooms")
         except Exception as e:
-            raise RuntimeError(e)
+            self.log.addError(str(e))
+            raise RuntimeError(self._friendly_db_error(e))
         if not _:
             raise RuntimeError("Таблицы не существует, создайте схему")
 
         amenities = dct.get("amenities", [])
 
-        # необязательная дружелюбная валидация до чека БД
         if len(amenities) > 10:
             raise RuntimeError("Слишком много удобств: максимум 10.")
 
@@ -119,13 +159,15 @@ class HotelDB:
         try:
             self.cur.execute(sql, params)
             self.conn.commit()
+            self.log.addInfo(f"Данные номера записаны")
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError(f"Ошибка при вставке: !{e}! ({sql})")
+            self.log.addError(str(e) + '\n\t' + sql + '\n')
+            raise RuntimeError("Ошибка при вставке: " + self._friendly_db_error(e))
 
     # записывает данные о заселении
     def enterDataStays(self, dct):
-
+        self.log.addInfo(f"Записываются данные бронирования...")
         try:
             _ = self.pr_table("stays")
         except Exception as e:
@@ -138,18 +180,20 @@ class HotelDB:
         try:
             self.cur.execute(s, (dct["client_id"],))
         except Exception as e:
-            raise RuntimeError("Ошибка при проверке существования клиента: " + f"!{e}! ({s})")
+            self.log.addError(str(e) + '\n\t' + s + '\n')
+            raise RuntimeError("Ошибка при проверке существования клиента")
         if not self.cur.fetchone():
-            raise RuntimeError(f"Клиента с id={dct["client_id"]} не существует")
+            raise RuntimeError(f"Нарушение внешнего ключа (клиента с id={dct["client_id"]} не существует)")
 
         # проверка существования комнаты
         s = "SELECT id FROM rooms WHERE id = %s;"
         try:
             self.cur.execute(s, (dct["room_id"],))
         except Exception as e:
-            raise RuntimeError("Ошибка при проверке существования номера: " + f"!{e}! ({s})")
+            self.log.addError(str(e) + '\n\t' + s + '\n')
+            raise RuntimeError("Ошибка при проверке существования номера")
         if not self.cur.fetchone():
-            raise RuntimeError(f"Номера с id={dct["room_id"]} не существует")
+            raise RuntimeError(f"Нарушение внешнего ключа (номера с id={dct["room_id"]} не существует)")
 
         s = """
                 INSERT INTO stays (client_id, room_id, check_in, check_out, is_paid, note, status)
@@ -158,9 +202,10 @@ class HotelDB:
         try:
             self.cur.execute(s, (dct["client_id"], dct["room_id"], dct["check_in"], dct["check_out"], dct["is_paid"], dct["note"], dct["status"]))
             self.conn.commit()  # фиксируем
+            self.log.addInfo(f"Данные бронирования записаны")
         except Exception as e:
-            self.conn.rollback()
-            raise RuntimeError("Ошибка при вставке: " + f"!{e}! ({s})")
+            self.log.addError(str(e) + '\n\t' + s + '\n')
+            raise RuntimeError("Ошибка при вставке: " + self._friendly_db_error(e))
 
 
     def find_clients(self):
@@ -181,7 +226,8 @@ class HotelDB:
                 out.append({"id": cid, "label": f"{ln} {fn} (паспорт {pp})"})
             return out
         except Exception as e:
-            raise RuntimeError("Ошибка при поиске клиентов: " + f"!{e}! ({s})")
+            self.log.addError(str(e) + '\n\t' + s + '\n')
+            raise RuntimeError("Ошибка при поиске клиентов:" + self._friendly_db_error(e))
 
     def find_rooms(self):
         s ="""
@@ -201,4 +247,5 @@ class HotelDB:
                 out.append({"id": rid, "label": f"Комната {rn} ({cm}, {cp} мест)"})
             return out
         except Exception as e:
-            raise RuntimeError("Ошибка при поиске комнат: " + f"!{e}! ({s})")
+            self.log.addError(str(e) + '\n\t' + s + '\n')
+            raise RuntimeError("Ошибка при поиске комнат: " + self._friendly_db_error(e))

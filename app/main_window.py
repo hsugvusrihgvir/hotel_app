@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload # данные из окна
                 self.db.enterDataClient(data) # передача данных в класс для работы с бд
-                self._info(f"Добавление клиента [{data["last_name"], data["first_name"], data["patronymic"]}, {data["passport"]}] прошло успешно")
+                self._info(f"Добавление клиента [{data["last_name"]} {data["first_name"]} {data["patronymic"]}, {data["passport"]}] прошло успешно")
             except RuntimeError as e:
                 self._error(f"Не удалось добавить клиента: {e}")
 
