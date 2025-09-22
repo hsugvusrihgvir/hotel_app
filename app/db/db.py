@@ -67,7 +67,7 @@ class HotelDB:
 
     def connect(self): # подключение к бд
         try:
-            self.log.addInfo(f"Подключение к Бк {self.DB_NAME}...")
+            self.log.addInfo(f"Подключение к БД {self.DB_NAME}...")
             self.conn = psycopg2.connect(
                 dbname=self.DB_NAME,
                 user=self.DB_USER,
