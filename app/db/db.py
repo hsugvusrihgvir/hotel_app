@@ -98,16 +98,30 @@ class HotelDB:
             raise RuntimeError(e)
         if not _:
             raise RuntimeError("Таблицы не существует, создайте схему")
-        s = """
-                        INSERT INTO rooms (room_number, capacity, comfort, price)
-                        VALUES (%s, %s, %s, %s);
-                    """
+
+        amenities = dct.get("amenities", [])
+
+        # необязательная дружелюбная валидация до чека БД
+        if len(amenities) > 10:
+            raise RuntimeError("Слишком много удобств: максимум 10.")
+
+        sql = """
+               INSERT INTO rooms (room_number, capacity, comfort, price, amenities)
+               VALUES (%s, %s, %s, %s, %s)
+           """
+        params = (
+            dct["room_number"],
+            dct["capacity"],
+            dct["comfort"],
+            dct["price"],
+            amenities
+        )
         try:
-            self.cur.execute(s, (dct["room_number"], dct["capacity"], dct["comfort"], dct["price"]))
-            self.conn.commit()  # фиксируем
+            self.cur.execute(sql, params)
+            self.conn.commit()
         except Exception as e:
             self.conn.rollback()
-            raise RuntimeError("Ошибка при вставке: " + f"!{e}! ({s})")
+            raise RuntimeError(f"Ошибка при вставке: !{e}! ({sql})")
 
     # записывает данные о заселении
     def enterDataStays(self, dct):

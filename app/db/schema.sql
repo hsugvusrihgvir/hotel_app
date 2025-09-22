@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   room_number INT UNIQUE NOT NULL,
   capacity INT NOT NULL CHECK (capacity > 0),
   comfort comfort_enum NOT NULL,
-  price NUMERIC(10,2) NOT NULL CHECK (price > 0)
+  price NUMERIC(10,2) NOT NULL CHECK (price > 0),
+  amenities TEXT[] DEFAULT '{}' CHECK (cardinality(amenities) <= 10)
 );
 
 CREATE TABLE IF NOT EXISTS stays (

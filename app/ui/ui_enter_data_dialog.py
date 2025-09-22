@@ -117,6 +117,10 @@ QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
         self.sbCapacity = QSpinBox(self.pgRoom); self.sbCapacity.setMinimum(1)
         self.cbComfort = QComboBox(self.pgRoom); self.cbComfort.addItems(COMFORT_ENUM)
         self.dsPrice = QDoubleSpinBox(self.pgRoom); self.dsPrice.setDecimals(2); self.dsPrice.setMinimum(0.01); self.dsPrice.setMaximum(1_000_000.0)
+        self.edAmenities = QLineEdit(self.pgRoom)
+        self.edAmenities.setPlaceholderText("wifi, tv, conditioner")
+
+        self.lyRoom.addRow(self._lbl("Удобства (через запятую)"), self.edAmenities)
 
         self.lyRoom.addRow(self._lbl("Номер *"), self.sbRoomNumber)
         self.lyRoom.addRow(self._lbl("Вместимость *"), self.sbCapacity)
@@ -248,9 +252,17 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
             cap = int(self.ui.sbCapacity.value())
             price = float(self.ui.dsPrice.value())
             comfort = self.ui.cbComfort.currentText()
+            amenities_text = self.ui.edAmenities.text().strip()
+            amenities = [a.strip() for a in amenities_text.split(",") if a.strip()] if amenities_text else []
             if rn < 1 or cap < 1 or price <= 0:
                 raise ValueError("Номер >= 1, вместимость >= 1, цена > 0.")
-            return dict(room_number=rn, capacity=cap, comfort=comfort, price=price)
+            return dict(
+                room_number=rn,
+                capacity=cap,
+                comfort=comfort,
+                price=price,
+                amenities=amenities
+            )
 
         if self._mode == self.MODE_STAY:
             if self.ui.cbClient.currentIndex() < 0 or self.ui.cbRoom.currentIndex() < 0:
