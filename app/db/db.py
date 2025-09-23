@@ -150,10 +150,10 @@ class HotelDB:
                VALUES (%s, %s, %s, %s, %s)
            """
         params = (
-            dct["room_number"],
-            dct["capacity"],
-            dct["comfort"],
-            dct["price"],
+            dct['room_number'],
+            dct['capacity'],
+            dct['comfort'],
+            dct['price'],
             amenities
         )
         try:
