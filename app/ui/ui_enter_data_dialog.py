@@ -61,20 +61,7 @@ QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
         self.hHeader.addStretch(1)
 
         from PySide6.QtWidgets import QPushButton
-        self.btnModeClient = QPushButton(EnterDataDialog)
-        self.btnModeClient.setObjectName(u"btnModeClient")
-        self.btnModeClient.setCheckable(True)
-        self.hHeader.addWidget(self.btnModeClient)
 
-        self.btnModeRoom = QPushButton(EnterDataDialog)
-        self.btnModeRoom.setObjectName(u"btnModeRoom")
-        self.btnModeRoom.setCheckable(True)
-        self.hHeader.addWidget(self.btnModeRoom)
-
-        self.btnModeStay = QPushButton(EnterDataDialog)
-        self.btnModeStay.setObjectName(u"btnModeStay")
-        self.btnModeStay.setCheckable(True)
-        self.hHeader.addWidget(self.btnModeStay)
 
         self.vMain.addLayout(self.hHeader)
 
@@ -173,9 +160,6 @@ QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
     def retranslateUi(self, EnterDataDialog):
         EnterDataDialog.setWindowTitle(QCoreApplication.translate("EnterDataDialog", u"Ввод данных", None))
         self.lblTitle.setText(QCoreApplication.translate("EnterDataDialog", u"Режим: Клиент", None))
-        self.btnModeClient.setText(QCoreApplication.translate("EnterDataDialog", u"Клиент", None))
-        self.btnModeRoom.setText(QCoreApplication.translate("EnterDataDialog", u"Номер", None))
-        self.btnModeStay.setText(QCoreApplication.translate("EnterDataDialog", u"Размещение", None))
         self.cbRegular.setText(QCoreApplication.translate("EnterDataDialog", u"Постоянный клиент", None))
         self.cbPaid.setText(QCoreApplication.translate("EnterDataDialog", u"Оплачено", None))
         self.cbStatus.setText(QCoreApplication.translate("EnterDataDialog", u"Активно", None))
@@ -190,12 +174,11 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
 
     def __init__(self, parent=None, clients=None, rooms=None):
         super().__init__(parent)
+
+        self.mode = self.MODE_CLIENT
         self.ui = Ui_EnterDataDialog()
         self.ui.setupUi(self)
 
-        for b in (self.ui.btnModeClient, self.ui.btnModeRoom, self.ui.btnModeStay):
-            b.setAutoExclusive(True)
-        self.ui.btnModeClient.setChecked(True)
 
 
         clients = clients or []
@@ -210,15 +193,11 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
         self.ui.buttons.accepted.connect(self._on_ok)
         self.ui.buttons.rejected.connect(self.reject)
 
-        # переключатели режимов
-        self.ui.btnModeClient.clicked.connect(lambda: self.setMode(self.MODE_CLIENT))
-        self.ui.btnModeRoom.clicked.connect(lambda: self.setMode(self.MODE_ROOM))
-        self.ui.btnModeStay.clicked.connect(lambda: self.setMode(self.MODE_STAY))
 
         self.setMode(self.MODE_CLIENT)
 
     def setMode(self, mode:int):
-        self._mode = mode
+        self.mode = mode
         self.ui.stacked.setCurrentIndex(mode)
         title = ["Режим: Клиент", "Режим: Номер", "Режим: Размещение"][mode]
         self.ui.lblTitle.setText(title)
@@ -234,7 +213,7 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
         self.accept()
 
     def collect(self) -> dict:
-        if self._mode == self.MODE_CLIENT:
+        if self.mode == self.MODE_CLIENT:
             last = self.ui.edLast.text().strip()
             first = self.ui.edFirst.text().strip()
             passport = self.ui.edPassport.text().strip()
@@ -250,7 +229,7 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
                 registered=self.ui.dtRegistered.dateTime().toPython()
             )
 
-        if self._mode == self.MODE_ROOM:
+        if self.mode == self.MODE_ROOM:
             rn = int(self.ui.sbRoomNumber.value())
             cap = int(self.ui.sbCapacity.value())
             price = float(self.ui.dsPrice.value())
@@ -267,7 +246,7 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
                 amenities=amenities
             )
 
-        if self._mode == self.MODE_STAY:
+        if self.mode == self.MODE_STAY:
             if self.ui.cbClient.currentIndex() < 0 or self.ui.cbRoom.currentIndex() < 0:
                 raise ValueError("Выберите клиента и номер.")
             ci = self.ui.deIn.date().toPython()

@@ -98,8 +98,11 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_add_stays(self) -> None:  # аналогично
-        clients = self.db.find_clients()
-        rooms = self.db.find_rooms()
+        try:
+            clients = self.db.find_clients()
+            rooms = self.db.find_rooms()
+        except RuntimeError as e:
+            self._error("Ошибка с поиском данных в базе данных. Проверьте подключение.")
         dlg = EnterDataDialog(self, clients=clients, rooms=rooms)
         dlg.setMode(EnterDataDialog.MODE_STAY)
         if dlg.exec():
