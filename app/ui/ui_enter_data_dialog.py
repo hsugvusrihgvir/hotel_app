@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QLineEdit, QSpinBox, QStackedWidget, QVBoxLayout, QWidget, QMessageBox
 )
 
+
+
 COMFORT_ENUM = ["standard", "semi_lux", "lux"]
 
 class Ui_EnterDataDialog(object):
@@ -49,6 +51,13 @@ QPushButton#btnModeClient:checked { background:#2e7d6b; border-color:#2c6f60; }
 QPushButton#btnModeRoom:checked { background:#caa55b; color:#171a1d; border-color:#9b7d3f; }
 QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
 """)
+        simple_combo_style = """
+        QComboBox QAbstractItemView {
+            background: #20252a;
+            color: #e8e6e3;
+        }
+        """
+
 
         self.vMain = QVBoxLayout(EnterDataDialog)
         self.vMain.setObjectName(u"vMain")
@@ -106,6 +115,7 @@ QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
         self.sbRoomNumber = QSpinBox(self.pgRoom); self.sbRoomNumber.setMinimum(1); self.sbRoomNumber.setMaximum(9999)
         self.sbCapacity = QSpinBox(self.pgRoom); self.sbCapacity.setMinimum(1), self.sbCapacity.setMaximum(10)
         self.cbComfort = QComboBox(self.pgRoom); self.cbComfort.addItems(COMFORT_ENUM)
+        self.cbComfort.setStyleSheet(simple_combo_style)
         self.dsPrice = QDoubleSpinBox(self.pgRoom); self.dsPrice.setDecimals(2); self.dsPrice.setMinimum(0.01); self.dsPrice.setMaximum(1_000_000.0)
         self.edAmenities = QLineEdit(self.pgRoom)
         self.edAmenities.setPlaceholderText("wifi, tv, conditioner")
@@ -125,6 +135,8 @@ QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
         self.lyStay.setObjectName(u"lyStay")
         self.cbClient = QComboBox(self.pgStay); self.cbClient.setObjectName(u"cbClient")
         self.cbRoom = QComboBox(self.pgStay); self.cbRoom.setObjectName(u"cbRoom")
+        self.cbClient.setStyleSheet(simple_combo_style)
+        self.cbRoom.setStyleSheet(simple_combo_style)
         self.deIn = QDateEdit(self.pgStay); self.deIn.setCalendarPopup(True); self.deIn.setDate(QDate.currentDate())
         self.deOut = QDateEdit(self.pgStay); self.deOut.setCalendarPopup(True); self.deOut.setDate(QDate.currentDate().addDays(1))
         self.edNote = QLineEdit(self.pgStay); self.edNote.setObjectName(u"edNote")
