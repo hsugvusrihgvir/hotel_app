@@ -183,7 +183,7 @@ class HotelDB:
             self.log.addError(str(e) + '\n\t' + s + '\n')
             raise RuntimeError("Ошибка при проверке существования клиента")
         if not self.cur.fetchone():
-            raise RuntimeError(f"Нарушение внешнего ключа (клиента с id={dct["client_id"]} не существует)")
+            raise RuntimeError(f"Нарушение внешнего ключа (клиента с id={dct['client_id']} не существует)")
 
         # проверка существования комнаты
         s = "SELECT id FROM rooms WHERE id = %s;"
@@ -193,7 +193,7 @@ class HotelDB:
             self.log.addError(str(e) + '\n\t' + s + '\n')
             raise RuntimeError("Ошибка при проверке существования номера")
         if not self.cur.fetchone():
-            raise RuntimeError(f"Нарушение внешнего ключа (номера с id={dct["room_id"]} не существует)")
+            raise RuntimeError(f"Нарушение внешнего ключа (номера с id={dct['room_id']} не существует)")
 
         s = """
                 INSERT INTO stays (client_id, room_id, check_in, check_out, is_paid, note, status)

@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload # данные из окна
                 self.db.enterDataClient(data) # передача данных в класс для работы с бд
-                self._info(f"Добавление клиента [{data["last_name"]} {data["first_name"]} {data["patronymic"]}, {data["passport"]}] прошло успешно")
+                self._info(f"Добавление клиента [{data['last_name']} {data['first_name']} {data['patronymic']}, {data['passport']}] прошло успешно")
             except RuntimeError as e:
                 self._error(f"Не удалось добавить клиента: {e}")
 
@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload
                 self.db.enterDataRooms(data)
-                self._info(f"Добавление комнаты {data["room_number"]} прошло успешно")
+                self._info(f"Добавление комнаты {data['room_number']} прошло успешно")
             except RuntimeError as e:
                 self._error(f"Не удалось добавить комнату:\n{e}")
 
@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):  # меню
             try:
                 data = dlg.payload
                 self.db.enterDataStays(data)
-                self._info(f"Добавление бронирования клиентом {data["client_id"]} комнаты {data["room_id"]} прошло успешно")
+                self._info(f"Добавление бронирования клиентом {data['client_id']} комнаты {data['room_id']} прошло успешно")
             except RuntimeError as e:
                 self._error(f"Не удалось добавить: {e}")
 
