@@ -249,3 +249,9 @@ class HotelDB:
         except Exception as e:
             self.log.addError(str(e) + '\n\t' + s + '\n')
             raise RuntimeError("Ошибка при поиске комнат: " + self._friendly_db_error(e))
+
+    def room_exists(self, room_number):
+        s = "SELECT COUNT(*) FROM rooms WHERE room_number = %s"
+        self.cur.execute(s, (room_number,))
+        count = self.cur.fetchone()[0]
+        return count > 0

@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_add_room(self) -> None:  # аналогично
-        dlg = EnterDataDialog(self)
+        dlg = EnterDataDialog(self, db=self.db)
         dlg.setMode(EnterDataDialog.MODE_ROOM)
         if dlg.exec():
             try:

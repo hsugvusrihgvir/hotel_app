@@ -11,6 +11,7 @@
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QRect, QSize, Qt, QRegularExpression)
 from PySide6.QtGui import QRegularExpressionValidator
+from app.db.db import HotelDB
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDateEdit, QDateTimeEdit, QDialog,
     QDialogButtonBox, QDoubleSpinBox, QFormLayout, QHBoxLayout, QLabel,
@@ -184,13 +185,13 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
     MODE_ROOM = 1
     MODE_STAY = 2
 
-    def __init__(self, parent=None, clients=None, rooms=None):
+    def __init__(self, parent=None, clients=None, rooms=None, db=None):
         super().__init__(parent)
 
         self.mode = self.MODE_CLIENT
         self.ui = Ui_EnterDataDialog()
         self.ui.setupUi(self)
-
+        self.db = db
 
 
         clients = clients or []
@@ -250,6 +251,8 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
             amenities = [a.strip() for a in amenities_text.split(",") if a.strip()] if amenities_text else []
             if rn < 1 or cap < 1 or price <= 0:
                 raise ValueError("Номер >= 1, вместимость >= 1, цена > 0.")
+            if self.db.room_exists(room_number=rn):
+                raise ValueError("Этот номер уже есть в базе.")
             return dict(
                 room_number=rn,
                 capacity=cap,
