@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):  # меню
         self.ui.btnOpenLog.clicked.connect(self.on_open_log) # открыть лог файл
         self.ui.btnAbout.clicked.connect(self.on_about) # о приложении
         self.ui.btnExit.clicked.connect(self.close) # закрыть
+        self.on_connect()
 
     def _info(self, text: str) -> None: # открытие окна с передаваемой информацией
         QMessageBox.information(self, "Информация", text)
