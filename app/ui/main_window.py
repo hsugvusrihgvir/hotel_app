@@ -1,12 +1,12 @@
-from ui.ui_enter_data_dialog import EnterDataDialog # открытие, диалоговое окно с выбором режима
+from app.ui.ui_enter_data_dialog import EnterDataDialog # открытие, диалоговое окно с выбором режима
 
 from PySide6.QtWidgets import (
     QMainWindow, QMessageBox, )
 from PySide6.QtCore import Slot
 
 from app.ui.ui_main_window import Ui_MainWindow
-from db.db import HotelDB
-from log.log import HotelLog
+from app.db.db import HotelDB
+from app.log.log import HotelLog
 
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):  # меню
         self.ui.btnOpenLog.clicked.connect(self.on_open_log) # открыть лог файл
         self.ui.btnAbout.clicked.connect(self.on_about) # о приложении
         self.ui.btnExit.clicked.connect(self.close) # закрыть
+
         self.on_connect()
 
     def _info(self, text: str) -> None: # открытие окна с передаваемой информацией
