@@ -53,7 +53,6 @@ class MainWindow(QMainWindow):  # меню
         try:
             self.db.connect()
             self.connected = True # подключение успешно
-            self._info("Подключение к базе данных установлено.")
         except RuntimeError as e:
             self.connected = False
             self._error(f"Не удалось подключиться:\n{e}")
