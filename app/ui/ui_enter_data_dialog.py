@@ -85,8 +85,14 @@ QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
         self.lyClient = QFormLayout(self.pgClient)
         self.lyClient.setObjectName(u"lyClient")
         self.edLast = QLineEdit(self.pgClient); self.edLast.setObjectName(u"edLast")
+        self.edLast.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']+$"), self.edLast))
         self.edFirst = QLineEdit(self.pgClient); self.edFirst.setObjectName(u"edFirst")
+        self.edFirst.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']+$"), self.edFirst))
         self.edPatr = QLineEdit(self.pgClient); self.edPatr.setObjectName(u"edPatr")
+        self.edPatr.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']+$"), self.edPatr))
         self.edPassport = QLineEdit(self.pgClient); self.edPassport.setObjectName(u"edPassport")
         self.edPassport.setObjectName(u"edPassport")
         self.edPassport.setMaxLength(11)
@@ -225,17 +231,29 @@ class EnterDataDialog(QDialog): # режимы для разных таблиц
             return
         self.accept()
 
+    def rightRegister(self, name):
+        if not name:
+            return ""
+        name = name.lower()
+        " ".join(name.split())
+        hyphen_parts = []
+        for part in name.split('-'):
+            space_parts = [p.capitalize() for p in part.split()]
+            hyphen_parts.append(' '.join(space_parts))
+
+        return '-'.join(hyphen_parts)
+
     def collect(self) -> dict:
         if self.mode == self.MODE_CLIENT:
-            last = self.ui.edLast.text().strip()
-            first = self.ui.edFirst.text().strip()
+            last = self.rightRegister(name=self.ui.edLast.text().strip())
+            first = self.rightRegister(name=self.ui.edFirst.text().strip())
             passport = self.ui.edPassport.text().strip()
             if not last or not first or len(passport) != 11:
-                raise ValueError("Фамилия и Имя обязательны. Паспорт — ровно 11 цифр.")
+                raise ValueError("Фамилия и Имя обязательны. Паспорт о формату через пробел.")
             return dict(
                 last_name=last,
                 first_name=first,
-                patronymic=self.ui.edPatr.text().strip() or None,
+                patronymic=self.rightRegister(name=self.ui.edPatr.text().strip()) or None,
                 passport=passport,
                 comment=self.ui.edComment.text().strip() or None,
                 is_regular=self.ui.cbRegular.isChecked(),

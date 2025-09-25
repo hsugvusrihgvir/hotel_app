@@ -12,6 +12,7 @@ from log.log import HotelLog
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
 
+from data_window import DataWindow
 
 class MainWindow(QMainWindow):  # меню
     def __init__(self) -> None:
@@ -69,7 +70,11 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_show_data(self) -> None: # показать данные
-        pass
+        if not self.connected: # проверка подключения к базе данных
+            self._error("Сначала подключитесь к базе данных")
+            return
+        data_window = DataWindow(self, self.db) # создается и показывается модальное окно
+        data_window.exec_() # блок родительского окна до закрытия
 
 
     @Slot()
