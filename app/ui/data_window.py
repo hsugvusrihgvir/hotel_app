@@ -37,11 +37,16 @@ class DataWindow(QDialog):
         self.btn_update = QPushButton("Обновить")
         self.btn_update.clicked.connect(self.update_table)  # подключение сигнала к слоту
 
+        # кнопка фильтров
+        self.btn_filter = QPushButton("Поиск по...")
+        self.btn_filter.clicked.connect(self.filter_button)  # открытие окна с фильтрами
+
         # кнопка закрытия окна
         self.btn_close = QPushButton("Закрыть")
         self.btn_close.clicked.connect(self.close)  # подключение сигнала к слоту
 
         buttons_layout.addWidget(self.btn_update)  # добавление кнопки обновления
+        buttons_layout.addWidget(self.btn_filter)  # рядом с "Обновить", фильтры
         buttons_layout.addStretch()  # добавляем растягивающееся пространство
         buttons_layout.addWidget(self.btn_close)  # добавление кнопки закрытия
 
@@ -69,3 +74,5 @@ class DataWindow(QDialog):
         # автоматическое растягивание столбцов под содержимое
         self.table_view.resizeColumnsToContents()
 
+    def filter_button(self):
+        pass
