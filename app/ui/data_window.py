@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTableView, QPushButton,
                                QMessageBox, QHBoxLayout)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, qWarning
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from app.ui.filters_window import FilterWindow
@@ -91,18 +91,30 @@ class DataWindow(QDialog):
         layout.addLayout(buttons_layout)  # добавление layout с кнопками в основной layout
 
 
-    def update_table(self):
+    def update_table(self, selected_column = None, selected_sort = 0):
         self.model.clear()  # очистка модели данных
 
-        data = self.db.load_data()
+        # заголовки столбцов таблицы
+        headers = {"ID": 0,
+                   "Клиент": 1,
+                   "Номер": 2,
+                   "Комфорт": 3,
+                   "Заезд": 4,
+                   "Выезд": 5,
+                   "Оплата": 6,
+                   "Статус": 7}
+
+        if selected_column and selected_column in headers:
+            column_number = headers[selected_column]
+        else: column_number = 0
+
+        data = self.db.load_data(column_number, selected_sort)
 
         if not data:  # проверка на наличие данных
             self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет
             return
 
-        # заголовки столбцов таблицы
-        headers = ["ID", "Клиент", "Номер", "Комфорт", "Заезд", "Выезд", "Оплата", "Статус"]
-        self.model.setHorizontalHeaderLabels(headers)  # установка заголовков
+        self.model.setHorizontalHeaderLabels(list(map(str, headers.keys())) ) # установка заголовков
 
         # заполнение таблицы данными
         for row in data:
