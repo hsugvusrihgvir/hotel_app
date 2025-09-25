@@ -12,7 +12,39 @@ class DataWindow(QDialog):
         self.setModal(True)  # делаем окно модальным (блокирует родительское)
         self.setMinimumSize(900, 500)  # установка минимального размера окна
 
-        self.setup_ui()  # настройка пользовательского интерфейса
+        # добавление стиля основного окна
+        self.setStyleSheet("""
+                    QDialog { 
+                        background: #171a1d; 
+                        color: #e8e6e3; 
+                    }
+                    QTableView { 
+                        background: #242a30; 
+                        color: #e8e6e3;
+                        border: 1px solid #323a42;
+                        gridline-color: #323a42;
+                    }
+                    QTableView::item:hover { 
+                        background: #2b3238; 
+                    }
+                    QHeaderView::section { 
+                        background: #20252a; 
+                        color: #e8e6e3;
+                        border: 1px solid #323a42;
+                    }
+                    QPushButton { 
+                        background: #242a30; 
+                        color: #e8e6e3;
+                        border: 1px solid #323a42;
+                        padding: 8px 16px;
+                        border-radius: 5px;
+                    }
+                    QPushButton:hover { 
+                        background: #2b3238; 
+                    }
+                """)
+
+        self.setup_ui()
 
         if db is None:
             raise RuntimeError("Ошибка. Нет подключения к БД. Откройте сначала соединение.")
