@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTableView, QPushButton,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
+from app.ui.filters_window import FilterWindow
 
 
 class DataWindow(QDialog):
@@ -23,14 +24,17 @@ class DataWindow(QDialog):
                         color: #e8e6e3;
                         border: 1px solid #323a42;
                         gridline-color: #323a42;
+                        outline: 0;
                     }
                     QTableView::item:hover { 
                         background: #2b3238; 
+                        selection-background-color: #2b3238;
                     }
                     QHeaderView::section { 
                         background: #20252a; 
                         color: #e8e6e3;
                         border: 1px solid #323a42;
+                        padding: 8px;
                     }
                     QPushButton { 
                         background: #242a30; 
@@ -60,6 +64,8 @@ class DataWindow(QDialog):
         self.table_view = QTableView()
         self.model = QStandardItemModel()  # модель данных для таблицы
         self.table_view.setModel(self.model)  # связываем модель с таблицей
+        self.table_view.verticalHeader().setVisible(False) # убираем счёт строк (есть id)
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows) # выделение всей строки
         layout.addWidget(self.table_view)  # добавляем таблицу в layout
 
         # layout для кнопок
@@ -70,7 +76,7 @@ class DataWindow(QDialog):
         self.btn_update.clicked.connect(self.update_table)  # подключение сигнала к слоту
 
         # кнопка фильтров
-        self.btn_filter = QPushButton("Поиск по...")
+        self.btn_filter = QPushButton("Фильтры")
         self.btn_filter.clicked.connect(self.filter_button)  # открытие окна с фильтрами
 
         # кнопка закрытия окна
@@ -107,4 +113,5 @@ class DataWindow(QDialog):
         self.table_view.resizeColumnsToContents()
 
     def filter_button(self):
-        pass
+        filter_window = FilterWindow(self, self.db)  # создается и показывается модальное окно
+        filter_window.exec_()  # блок родительского окна до закрытия
