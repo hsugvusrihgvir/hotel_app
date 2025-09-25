@@ -24,7 +24,7 @@ env/
 
 # --- Logs / temp ---
 *.log
-logs/
+log/
 .DS_Store
 Thumbs.db
 
