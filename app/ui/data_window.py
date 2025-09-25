@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTableView, QPushButton,
                                QMessageBox, QHBoxLayout)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem
+from app.log.log import HotelLog
 
 
 
@@ -17,6 +18,7 @@ class DataWindow(QDialog):
         if db is None:
             raise RuntimeError("Ошибка. Нет подключения к БД. Откройте сначала соединение.")
         self.db = db
+        self.log = HotelLog()
 
         self.update_table()
 
@@ -50,8 +52,12 @@ class DataWindow(QDialog):
 
     def update_table(self):
         self.model.clear()  # очистка модели данных
+        try:
+            data = self.db.load_data()
+        except Exception as e:
+            raise
+        self.log.addInfo("Загрузка данных из БД прошла успешно")
 
-        data = self.db.load_data()
 
         if not data:  # проверка на наличие данных
             self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет
