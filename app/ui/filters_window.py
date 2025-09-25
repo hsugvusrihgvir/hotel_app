@@ -98,10 +98,13 @@ class FilterWindow(QDialog):
 
 
     def filters_refresh(self, ):
-        # очищаем поля
-        self.filter_combo1.setCurrentIndex(0)
-        self.filter_combo2.setCurrentIndex(0)
-        QMessageBox.information(self, "Фильтрация", "Фильтры сброшены")
+        try:
+            # очищаем поля
+            self.filter_combo1.setCurrentIndex(0)
+            self.filter_combo2.setCurrentIndex(0)
+            QMessageBox.information(self, "Фильтрация", "Фильтры сброшены")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f": {str(e)}")
 
     def filters_confirm(self):
         try:
