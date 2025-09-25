@@ -1,8 +1,7 @@
 from ui.ui_enter_data_dialog import EnterDataDialog # открытие, диалоговое окно с выбором режима
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QMessageBox, QFileDialog,
-)
+    QMainWindow, QMessageBox, )
 from PySide6.QtCore import Slot
 
 from app.ui.ui_main_window import Ui_MainWindow
@@ -12,7 +11,7 @@ from log.log import HotelLog
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
 
-from data_window import DataWindow
+from app.ui.data_window import DataWindow
 
 class MainWindow(QMainWindow):  # меню
     def __init__(self) -> None:
