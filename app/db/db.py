@@ -260,7 +260,7 @@ class HotelDB:
             raise RuntimeError("Ошибка при проверке существования комнат: " + self._friendly_db_error(e))
 
     # загрузка данных с сортировкой и без
-    def load_data(self, selected_column, selected_sort):
+    def load_data(self, filters_param):
         if not self.conn or not self.cur:
             raise RuntimeError("Нет подключения к БД")
 
@@ -293,9 +293,31 @@ class HotelDB:
                 "Статус": "status"
             }
 
+            # фильтр по столбцам
+            if isinstance(filters_param, dict) and filters_param['use_sort']:
+                selected_column = filters_param['sort_column']
+                selected_sort = filters_param['sort_order']
+            else:
+                selected_column = "ID"
+                selected_sort = "по возрастанию"
+
             sort_direction = "DESC" if selected_sort == "по убыванию" else "ASC"
             sort_column = column_mapping.get(selected_column, "s.id")
+
+            if isinstance(filters_param, dict) and filters_param['use_date']:
+                date_from = filters_param.get('date_from')
+                date_to = filters_param.get('date_to')
+                # фильтруем брони, которые пересекаются с указанным периодом
+                query += f"""
+                            WHERE (
+                                (s.check_in BETWEEN '{date_from}' AND '{date_to}') OR
+                                (s.check_out BETWEEN '{date_from}' AND '{date_to}') OR
+                                (s.check_in <= '{date_to}' AND s.check_out >= '{date_from}')
+                            )
+                            """
+
             query += f" ORDER BY {sort_column} {sort_direction}"
+            #hprint("Выполняемый SQL:", query)
 
             self.cur.execute(query)  # выполняем
             rows = self.cur.fetchall()  # забираем данные
