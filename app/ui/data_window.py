@@ -95,26 +95,24 @@ class DataWindow(QDialog):
         self.model.clear()  # очистка модели данных
 
         # заголовки столбцов таблицы
-        headers = {"ID": 0,
-                   "Клиент": 1,
-                   "Номер": 2,
-                   "Комфорт": 3,
-                   "Заезд": 4,
-                   "Выезд": 5,
-                   "Оплата": 6,
-                   "Статус": 7}
+        headers = ["ID",
+                   "Клиент",
+                   "Номер",
+                   "Комфорт",
+                   "Заезд",
+                   "Выезд",
+                   "Оплата",
+                   "Статус"]
 
-        if selected_column and selected_column in headers:
-            column_number = headers[selected_column]
-        else: column_number = 0
+        if selected_column is None: selected_column = headers[0]
 
-        data = self.db.load_data(column_number, selected_sort)
+        data = self.db.load_data(selected_column, selected_sort)
 
         if not data:  # проверка на наличие данных
             self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет
             return
 
-        self.model.setHorizontalHeaderLabels(list(map(str, headers.keys())) ) # установка заголовков
+        self.model.setHorizontalHeaderLabels(headers) # установка заголовков
 
         # заполнение таблицы данными
         for row in data:
@@ -126,4 +124,9 @@ class DataWindow(QDialog):
 
     def filter_button(self):
         filter_window = FilterWindow(self, self.db)  # создается и показывается модальное окно
+        filter_window.filterApplied.connect(self.handle_filter_data)
         filter_window.exec_()  # блок родительского окна до закрытия
+
+    def handle_filter_data(self, filter_data):
+        # Обновляем таблицу с учетом фильтрации
+        self.update_table(filter_data[0],filter_data[1])
