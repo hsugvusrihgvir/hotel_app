@@ -259,26 +259,44 @@ class HotelDB:
             self.log.addError(str(e) + '\n\t' + s + '\n')
             raise RuntimeError("Ошибка при проверке существования комнат: " + self._friendly_db_error(e))
 
-    def load_data(self):
+    # загрузка данных с сортировкой и без
+    def load_data(self, selected_column, selected_sort):
         if not self.conn or not self.cur:
             raise RuntimeError("Нет подключения к БД")
 
         try:
-            query = (
-                "SELECT "
-                "    s.id, "
-                "    c.last_name || ' ' || c.first_name AS client, "
-                "    r.room_number, "
-                "    r.comfort, "
-                "    s.check_in, "
-                "    s.check_out, "
-                "    CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid, "
-                "    CASE WHEN s.status  THEN 'Активно' ELSE 'Завершено' END AS status "
-                "FROM stays s "
-                "JOIN clients c ON s.client_id = c.id "
-                "JOIN rooms r  ON s.room_id   = r.id "
-                "ORDER BY s.check_in DESC"
-            )
+            #база
+            query = """
+                SELECT 
+                    s.id, 
+                    c.last_name || ' ' || c.first_name AS client, 
+                    r.room_number, 
+                    r.comfort, 
+                    s.check_in, 
+                    s.check_out, 
+                    CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid, 
+                    CASE WHEN s.status  THEN 'Активно' ELSE 'Завершено' END AS status 
+                FROM stays s 
+                JOIN clients c ON s.client_id = c.id 
+                JOIN rooms r  ON s.room_id   = r.id 
+            """
+
+            # соответствие столбцов
+            column_mapping = {
+                "ID": "s.id",
+                "Клиент": "client",
+                "Номер": "r.room_number",
+                "Комфорт": "r.comfort",
+                "Заезд": "s.check_in",
+                "Выезд": "s.check_out",
+                "Оплата": "paid",
+                "Статус": "status"
+            }
+
+            sort_direction = "DESC" if selected_sort == "убыванию" else "ASC"
+            sort_column = column_mapping.get(selected_column, "s.id")
+            query += f" ORDER BY {sort_column} {sort_direction}"
+
             self.cur.execute(query)  # выполняем
             rows = self.cur.fetchall()  # забираем данные
             return rows  # список кортежей
