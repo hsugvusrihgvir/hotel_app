@@ -11,7 +11,7 @@ class FilterWindow(QDialog):
         super().__init__(parent)  # вызов конструктора родительского класса
         self.setWindowTitle("Сделать фильтрацию по...")  # установка заголовка окна
         self.setModal(True)  # делаем окно модальным (блокирует родительское)
-        self.setMinimumSize(550, 350)  # установка минимального размера окна
+        self.setMinimumSize(550, 400)  # установка минимального размера окна
 
         # галочки
         self.sort_checkbox = QCheckBox("Сортировка по столбцу")
@@ -197,13 +197,18 @@ class FilterWindow(QDialog):
                 'use_sort': self.sort_checkbox.isChecked(),
                 'use_date': self.date_checkbox.isChecked(),
             }
-            if self.sort_checkbox.isChecked():
-                filter_params.update(self.sort_check())
+            if filter_params['use_sort']:
+                sort_params = self.sort_check()
+                if sort_params is not None:
+                    filter_params.update(sort_params)
+                else:
+                    return
 
-            if self.date_checkbox.isChecked():
+            if filter_params['use_date']:
                 date_from_to = self.date_check()
                 if date_from_to is not None:
                     filter_params.update(date_from_to)
+                else: return
 
             self.filterApplied.emit(filter_params)
             self.accept()
@@ -213,27 +218,26 @@ class FilterWindow(QDialog):
 
     def sort_check(self):
         try:
-            sort_filter = {}
-            # получаем значения
-            sort_filter['sort_column'] = self.filter_combo1.currentText()
-            sort_filter['sort_order'] = self.filter_combo2.currentText()
-            return sort_filter # отправляем
+            return {
+                'sort_column': self.filter_combo1.currentText(),
+                'sort_order': self.filter_combo2.currentText()
+            }
         except Exception as e:
             raise Exception(f"Ошибка в настройках сортировки: {str(e)}")
 
 
     def date_check(self):
         try:
-            filters = {}
-            date_from = self.date_from.date().toString("yyyy-MM-dd")
-            date_to = self.date_to.date().toString("yyyy-MM-dd")
+            date_from = self.date_from.date()
+            date_to = self.date_to.date()
             # проверка даты
             if self.date_from.date() > self.date_to.date():
                 QMessageBox.warning(self, "Предупреждение",
                                     "Дата 'с' не может быть больше даты 'по'")
                 return None
-            filters['date_from'] = date_from
-            filters['date_to'] = date_to
-            return filters
+            return {
+                'date_from': date_from.toString("yyyy-MM-dd"),
+                'date_to': date_to.toString("yyyy-MM-dd")
+            }
         except Exception as e:
             raise Exception(f"Ошибка в настройках даты: {str(e)}")
