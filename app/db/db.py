@@ -333,7 +333,6 @@ class HotelDB:
             if where_conditions:
                 query += " WHERE " + " AND ".join(where_conditions)
             query += f" ORDER BY {sort_column} {sort_direction}"
-            print("Выполняемый SQL:", query)
 
             self.cur.execute(query)  # выполняем
             rows = self.cur.fetchall()  # забираем данные
