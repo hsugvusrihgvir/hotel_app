@@ -62,7 +62,8 @@ class FilterWindow(QDialog):
                     }
                     QCheckBox {
                         color: #e8e6e3;
-                        font-size: 14px;
+                        font-size: 16px;
+                        font-weight: bold;
                     }
                     QDateEdit {
                         background: #242a30;
@@ -184,6 +185,13 @@ class FilterWindow(QDialog):
 
         paid_layout1 = QHBoxLayout()
         is_paid_text = QLabel("Оплачено? ('нет' по умолчанию) -->")
+        self.is_paid.setStyleSheet("""
+            QCheckBox {
+                color: #e8e6e3;
+                font-weight: normal;
+                font-size: 14px;
+            }
+        """)
         self.is_paid.setEnabled(False)
         paid_layout1.addWidget(is_paid_text)
         paid_layout1.addWidget(self.is_paid)
