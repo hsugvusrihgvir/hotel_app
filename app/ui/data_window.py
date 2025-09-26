@@ -91,7 +91,7 @@ class DataWindow(QDialog):
         layout.addLayout(buttons_layout)  # добавление layout с кнопками в основной layout
 
 
-    def update_table(self, selected_column = None, selected_sort = None):
+    def update_table(self, filter_params = None):
         self.model.clear()  # очистка модели данных
 
         # заголовки столбцов таблицы
@@ -104,10 +104,7 @@ class DataWindow(QDialog):
                    "Оплата",
                    "Статус"]
 
-        if selected_column is None: selected_column = headers[0]
-        if selected_sort is None: selected_sort = "по возрастанию"
-
-        data = self.db.load_data(selected_column, selected_sort)
+        data = self.db.load_data(filter_params)
 
         if not data:  # проверка на наличие данных
             self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет
@@ -124,10 +121,16 @@ class DataWindow(QDialog):
         self.table_view.resizeColumnsToContents()
 
     def filter_button(self):
-        filter_window = FilterWindow(self, self.db)  # создается и показывается модальное окно
-        filter_window.filterApplied.connect(self.handle_filter_data)
-        filter_window.exec_()  # блок родительского окна до закрытия
+        try:
+            filter_window = FilterWindow(self, self.db)  # создается и показывается модальное окно
+            filter_window.filterApplied.connect(self.handle_filter)
+            filter_window.exec_()  # блок родительского окна до закрытия
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка открытия фильтра: {str(e)}")
 
-    def handle_filter_data(self, filter_data):
-        # Обновляем таблицу с учетом фильтрации
-        self.update_table(filter_data[0],filter_data[1])
+    def handle_filter(self, filter_params):
+        try:
+            # Обновляем таблицу с учетом фильтрации
+            self.update_table(filter_params)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка применения фильтра: {str(e)}")
