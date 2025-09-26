@@ -269,7 +269,7 @@ class HotelDB:
             query = """
                 SELECT 
                     s.id, 
-                    c.last_name || ' ' || c.first_name AS client, 
+                    c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client, 
                     r.room_number, 
                     r.comfort, 
                     s.check_in, 
