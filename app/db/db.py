@@ -293,7 +293,7 @@ class HotelDB:
                 "Статус": "status"
             }
 
-            sort_direction = "DESC" if selected_sort == "убыванию" else "ASC"
+            sort_direction = "DESC" if selected_sort == "по убыванию" else "ASC"
             sort_column = column_mapping.get(selected_column, "s.id")
             query += f" ORDER BY {sort_column} {sort_direction}"
 

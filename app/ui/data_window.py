@@ -91,7 +91,7 @@ class DataWindow(QDialog):
         layout.addLayout(buttons_layout)  # добавление layout с кнопками в основной layout
 
 
-    def update_table(self, selected_column = None, selected_sort = 0):
+    def update_table(self, selected_column = None, selected_sort = None):
         self.model.clear()  # очистка модели данных
 
         # заголовки столбцов таблицы
@@ -105,6 +105,7 @@ class DataWindow(QDialog):
                    "Статус"]
 
         if selected_column is None: selected_column = headers[0]
+        if selected_sort is None: selected_sort = "по возрастанию"
 
         data = self.db.load_data(selected_column, selected_sort)
 
