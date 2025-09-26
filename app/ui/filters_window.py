@@ -45,6 +45,10 @@ class FilterWindow(QDialog):
                     QPushButton:hover { 
                         background: #2b3238; 
                     }
+                    QComboBox QAbstractItemView { 
+                        background: #20252a; 
+                        color: #e8e6e3; 
+                    }
                     QComboBox {
                     background: #242a30;
                     color: #e8e6e3;
@@ -71,7 +75,28 @@ class FilterWindow(QDialog):
                         border: 1px solid #323a42;
                         border-radius: 5px;
                         padding: 5px;
-            }
+                    }
+                    QCalendarWidget QTableView { 
+                        alternate-background-color: #20252a;
+                        background: #20252a;
+                        selection-background-color: #1e6d5b; 
+                    }
+                    QCalendarWidget QTableView::item:hover {
+                        background: #4b5258; 
+                    }
+                    QCalendarWidget QAbstractItemView:disabled {
+                        color: #7b7e82; background-color: #2a2f36; 
+                    }
+                    QMenu {
+                        background-color: #2a2f36; 
+                        color: #e8e6e3; 
+                        border: 1px solid #323a42; 
+                        border-radius: 4px; 
+                    }
+                    QMenu::item:selected {
+                        background-color: #2e7d6b;
+                        color: white; 
+                    }
                     """)
 
         self.setup_ui()
