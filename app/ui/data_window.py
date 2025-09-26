@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTableView, QPushButton,
                                QMessageBox, QHBoxLayout)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, qWarning
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
+from app.ui.filters_window import FilterWindow
 
 
 class DataWindow(QDialog):
@@ -12,7 +13,42 @@ class DataWindow(QDialog):
         self.setModal(True)  # делаем окно модальным (блокирует родительское)
         self.setMinimumSize(900, 500)  # установка минимального размера окна
 
-        self.setup_ui()  # настройка пользовательского интерфейса
+        # добавление стиля основного окна
+        self.setStyleSheet("""
+                    QDialog { 
+                        background: #171a1d; 
+                        color: #e8e6e3; 
+                    }
+                    QTableView { 
+                        background: #242a30; 
+                        color: #e8e6e3;
+                        border: 1px solid #323a42;
+                        gridline-color: #323a42;
+                        outline: 0;
+                    }
+                    QTableView::item:hover { 
+                        background: #2b3238; 
+                        selection-background-color: #2b3238;
+                    }
+                    QHeaderView::section { 
+                        background: #20252a; 
+                        color: #e8e6e3;
+                        border: 1px solid #323a42;
+                        padding: 8px;
+                    }
+                    QPushButton { 
+                        background: #242a30; 
+                        color: #e8e6e3;
+                        border: 1px solid #323a42;
+                        padding: 8px 16px;
+                        border-radius: 5px;
+                    }
+                    QPushButton:hover { 
+                        background: #2b3238; 
+                    }
+                """)
+
+        self.setup_ui()
 
         if db is None:
             raise RuntimeError("Ошибка. Нет подключения к БД. Откройте сначала соединение.")
@@ -28,6 +64,8 @@ class DataWindow(QDialog):
         self.table_view = QTableView()
         self.model = QStandardItemModel()  # модель данных для таблицы
         self.table_view.setModel(self.model)  # связываем модель с таблицей
+        self.table_view.verticalHeader().setVisible(False) # убираем счёт строк (есть id)
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows) # выделение всей строки
         layout.addWidget(self.table_view)  # добавляем таблицу в layout
 
         # layout для кнопок
@@ -37,29 +75,42 @@ class DataWindow(QDialog):
         self.btn_update = QPushButton("Обновить")
         self.btn_update.clicked.connect(self.update_table)  # подключение сигнала к слоту
 
+        # кнопка фильтров
+        self.btn_filter = QPushButton("Фильтры")
+        self.btn_filter.clicked.connect(self.filter_button)  # открытие окна с фильтрами
+
         # кнопка закрытия окна
         self.btn_close = QPushButton("Закрыть")
         self.btn_close.clicked.connect(self.close)  # подключение сигнала к слоту
 
         buttons_layout.addWidget(self.btn_update)  # добавление кнопки обновления
+        buttons_layout.addWidget(self.btn_filter)  # рядом с "Обновить", фильтры
         buttons_layout.addStretch()  # добавляем растягивающееся пространство
         buttons_layout.addWidget(self.btn_close)  # добавление кнопки закрытия
 
         layout.addLayout(buttons_layout)  # добавление layout с кнопками в основной layout
 
 
-    def update_table(self):
+    def update_table(self, filter_params = None):
         self.model.clear()  # очистка модели данных
 
-        data = self.db.load_data()
+        # заголовки столбцов таблицы
+        headers = ["ID",
+                   "Клиент",
+                   "Номер",
+                   "Комфорт",
+                   "Заезд",
+                   "Выезд",
+                   "Оплата",
+                   "Статус"]
+
+        data = self.db.load_data(filter_params)
 
         if not data:  # проверка на наличие данных
             self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет
             return
 
-        # заголовки столбцов таблицы
-        headers = ["ID", "Клиент", "Номер", "Комфорт", "Заезд", "Выезд", "Оплата", "Статус"]
-        self.model.setHorizontalHeaderLabels(headers)  # установка заголовков
+        self.model.setHorizontalHeaderLabels(headers) # установка заголовков
 
         # заполнение таблицы данными
         for row in data:
@@ -69,3 +120,17 @@ class DataWindow(QDialog):
         # автоматическое растягивание столбцов под содержимое
         self.table_view.resizeColumnsToContents()
 
+    def filter_button(self):
+        try:
+            filter_window = FilterWindow(self, self.db)  # создается и показывается модальное окно
+            filter_window.filterApplied.connect(self.handle_filter)
+            filter_window.exec_()  # блок родительского окна до закрытия
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка открытия фильтра: {str(e)}")
+
+    def handle_filter(self, filter_params):
+        try:
+            # обновляем таблицу с учетом фильтрации
+            self.update_table(filter_params)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка применения фильтра: {str(e)}")
