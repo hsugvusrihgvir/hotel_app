@@ -131,8 +131,6 @@ class DataWindow(QDialog):
     def handle_filter(self, filter_params):
         try:
             # обновляем таблицу с учетом фильтрации
-            if not filter_params.get('use_sort') and not filter_params.get('use_date'):
-                return
             self.update_table(filter_params)
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка применения фильтра: {str(e)}")

@@ -322,18 +322,18 @@ class HotelDB:
 
             # фильтр по комфорту номера
             if isinstance(filters_param, dict) and filters_param['use_comfort']:
-                comfort_filter = filters_param['sort_comfort']
+                comfort_filter = filters_param['comfort_level']
                 where_conditions.append(f"r.comfort = '{comfort_filter}'")
 
             # фильтр по отплате
             if isinstance(filters_param, dict) and filters_param['use_paid']:
-                case_paid = filters_param['sort_paid']
+                case_paid = filters_param['is_paid']
                 where_conditions.append(f"s.is_paid = '{case_paid}'")
 
             if where_conditions:
                 query += " WHERE " + " AND ".join(where_conditions)
             query += f" ORDER BY {sort_column} {sort_direction}"
-            #print("Выполняемый SQL:", query)
+            print("Выполняемый SQL:", query)
 
             self.cur.execute(query)  # выполняем
             rows = self.cur.fetchall()  # забираем данные
