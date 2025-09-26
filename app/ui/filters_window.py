@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTableView, QPushButton,
                                QMessageBox, QHBoxLayout, QComboBox, QLabel)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import (Qt, Signal)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 
 class FilterWindow(QDialog):
+    filterApplied = Signal(list) # сигнал для передачи данных
+
     def __init__(self, parent=None, db=None):
         super().__init__(parent)  # вызов конструктора родительского класса
         self.setWindowTitle("Сделать фильтрацию по...")  # установка заголовка окна
@@ -109,7 +111,9 @@ class FilterWindow(QDialog):
     def filters_confirm(self):
         try:
             # получаем значения
-            pass
-
+            filter_list = [self.filter_combo1.currentText(),
+                           self.filter_combo2.currentText()]
+            self.filterApplied.emit(filter_list)  # отправляем сигнал
+            self.accept()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка применения фильтра: {str(e)}")
