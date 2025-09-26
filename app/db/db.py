@@ -304,20 +304,36 @@ class HotelDB:
             sort_direction = "DESC" if selected_sort == "по убыванию" else "ASC"
             sort_column = column_mapping.get(selected_column, "s.id")
 
+            # список условий WHERE
+            where_conditions = []
+
+            # фильтр по дате
             if isinstance(filters_param, dict) and filters_param['use_date']:
                 date_from = filters_param.get('date_from')
                 date_to = filters_param.get('date_to')
                 # фильтруем брони, которые пересекаются с указанным периодом
-                query += f"""
-                            WHERE (
+                where_conditions.append(f"""
+                            (
                                 (s.check_in BETWEEN '{date_from}' AND '{date_to}') OR
                                 (s.check_out BETWEEN '{date_from}' AND '{date_to}') OR
                                 (s.check_in <= '{date_to}' AND s.check_out >= '{date_from}')
                             )
-                            """
+                            """)
 
+            # фильтр по комфорту номера
+            if isinstance(filters_param, dict) and filters_param['use_comfort']:
+                comfort_filter = filters_param['sort_comfort']
+                where_conditions.append(f"r.comfort = '{comfort_filter}'")
+
+            # фильтр по отплате
+            if isinstance(filters_param, dict) and filters_param['use_paid']:
+                case_paid = filters_param['sort_paid']
+                where_conditions.append(f"s.is_paid = '{case_paid}'")
+
+            if where_conditions:
+                query += " WHERE " + " AND ".join(where_conditions)
             query += f" ORDER BY {sort_column} {sort_direction}"
-            #hprint("Выполняемый SQL:", query)
+            #print("Выполняемый SQL:", query)
 
             self.cur.execute(query)  # выполняем
             rows = self.cur.fetchall()  # забираем данные
