@@ -259,26 +259,81 @@ class HotelDB:
             self.log.addError(str(e) + '\n\t' + s + '\n')
             raise RuntimeError("Ошибка при проверке существования комнат: " + self._friendly_db_error(e))
 
-    def load_data(self):
+    # загрузка данных с сортировкой и без
+    def load_data(self, filters_param):
         if not self.conn or not self.cur:
             raise RuntimeError("Нет подключения к БД")
 
         try:
-            query = (
-                "SELECT "
-                "    s.id, "
-                "    c.last_name || ' ' || c.first_name AS client, "
-                "    r.room_number, "
-                "    r.comfort, "
-                "    s.check_in, "
-                "    s.check_out, "
-                "    CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid, "
-                "    CASE WHEN s.status  THEN 'Активно' ELSE 'Завершено' END AS status "
-                "FROM stays s "
-                "JOIN clients c ON s.client_id = c.id "
-                "JOIN rooms r  ON s.room_id   = r.id "
-                "ORDER BY s.check_in DESC"
-            )
+            #база
+            query = """
+                SELECT 
+                    s.id, 
+                    c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client, 
+                    r.room_number, 
+                    r.comfort, 
+                    s.check_in, 
+                    s.check_out, 
+                    CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid, 
+                    CASE WHEN s.status  THEN 'Активно' ELSE 'Завершено' END AS status 
+                FROM stays s 
+                JOIN clients c ON s.client_id = c.id 
+                JOIN rooms r  ON s.room_id   = r.id 
+            """
+
+            # соответствие столбцов
+            column_mapping = {
+                "ID": "s.id",
+                "Клиент": "client",
+                "Номер": "r.room_number",
+                "Комфорт": "r.comfort",
+                "Заезд": "s.check_in",
+                "Выезд": "s.check_out",
+                "Оплата": "paid",
+                "Статус": "status"
+            }
+
+            # фильтр по столбцам
+            if isinstance(filters_param, dict) and filters_param['use_sort']:
+                selected_column = filters_param['sort_column']
+                selected_sort = filters_param['sort_order']
+            else:
+                selected_column = "ID"
+                selected_sort = "по возрастанию"
+
+            sort_direction = "DESC" if selected_sort == "по убыванию" else "ASC"
+            sort_column = column_mapping.get(selected_column, "s.id")
+
+            # список условий WHERE
+            where_conditions = []
+
+            # фильтр по дате
+            if isinstance(filters_param, dict) and filters_param['use_date']:
+                date_from = filters_param.get('date_from')
+                date_to = filters_param.get('date_to')
+                # фильтруем брони, которые пересекаются с указанным периодом
+                where_conditions.append(f"""
+                            (
+                                (s.check_in BETWEEN '{date_from}' AND '{date_to}') OR
+                                (s.check_out BETWEEN '{date_from}' AND '{date_to}') OR
+                                (s.check_in <= '{date_to}' AND s.check_out >= '{date_from}')
+                            )
+                            """)
+
+            # фильтр по комфорту номера
+            if isinstance(filters_param, dict) and filters_param['use_comfort']:
+                comfort_filter = filters_param['comfort_level']
+                where_conditions.append(f"r.comfort = '{comfort_filter}'")
+
+            # фильтр по отплате
+            if isinstance(filters_param, dict) and filters_param['use_paid']:
+                case_paid = filters_param['is_paid']
+                where_conditions.append(f"s.is_paid = '{case_paid}'")
+
+            if where_conditions:
+                query += " WHERE " + " AND ".join(where_conditions)
+            query += f" ORDER BY {sort_column} {sort_direction}"
+
             self.cur.execute(query)  # выполняем
             rows = self.cur.fetchall()  # забираем данные
             return rows  # список кортежей

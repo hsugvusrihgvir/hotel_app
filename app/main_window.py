@@ -12,6 +12,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
 
 from app.ui.data_window import DataWindow
+from app.ui.about import AboutDialog
 
 class MainWindow(QMainWindow):  # меню
     def __init__(self) -> None:
@@ -135,7 +136,8 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_about(self) -> None: # о приложении
-        pass
+        dlg = AboutDialog(self)
+        dlg.exec()
 
     def closeEvent(self, event):
         try:
