@@ -51,12 +51,16 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_connect(self) -> None:  # соединение с бд
-        try:
-            self.db.connect()
-            self.connected = True # подключение успешно
-        except RuntimeError as e:
-            self.connected = False
-            self._error(f"Не удалось подключиться:\n{e}")
+        if not self.connected:
+            try:
+                self.db.connect()
+                self.connected = True # подключение успешно
+                self.log.addInfo(f"Подключение к БД прошло успешно.")
+            except RuntimeError as e:
+                self.connected = False
+                self._error(f"Не удалось подключиться:\n{e}")
+                return
+        QMessageBox.information(self, "Информация", "Подключение уже выполнено.")
 
     @Slot()
     def on_create_schema(self) -> None: # создать схему

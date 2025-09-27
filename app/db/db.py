@@ -77,7 +77,6 @@ class HotelDB:
             )
             self.cur = self.conn.cursor()
             self.cur.execute("SET client_encoding TO 'UTF8';")
-            self.log.addInfo(f"Подключение к {self.DB_NAME} успешно")
         except Exception as e:
             self.log.addError(e)
             raise RuntimeError(f"Ошибка подключения к БД: {self._friendly_db_error(e)}")
