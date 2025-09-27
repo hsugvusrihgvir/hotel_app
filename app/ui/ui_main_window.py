@@ -150,12 +150,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.btnShowData)
 
-        self.btnUpdate = QPushButton(self.centralwidget)
-        self.btnUpdate.setObjectName(u"btnUpdate")
-        self.btnUpdate.setMinimumSize(QSize(0, 52))
-
-        self.verticalLayout_3.addWidget(self.btnUpdate)
-
 
         self.horizontalLayout_3.addLayout(self.verticalLayout_3)
 
@@ -226,7 +220,7 @@ class Ui_MainWindow(object):
         self.btnAbout.setText(QCoreApplication.translate("MainWindow", u"\u041e \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0435", None))
         self.btnOpenLog.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043b\u043e\u0433-\u0444\u0430\u0439\u043b", None))
         self.btnShowData.setText(QCoreApplication.translate("MainWindow", u"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435", None))
-        self.btnUpdate.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c", None))
+
         self.btnAddClient.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043b\u0438\u0435\u043d\u0442\u0430", None))
         self.btnAddRoom.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043d\u043e\u043c\u0435\u0440", None))
         self.btnAddStays.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u0438\u0435", None))

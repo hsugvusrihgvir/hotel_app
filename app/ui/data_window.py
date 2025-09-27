@@ -93,6 +93,7 @@ class DataWindow(QDialog):
 
     def update_table(self, filter_params = None):
         self.model.clear()  # очистка модели данных
+        data = None
 
         # заголовки столбцов таблицы
         headers = ["ID",
@@ -104,7 +105,10 @@ class DataWindow(QDialog):
                    "Оплата",
                    "Статус"]
 
-        data = self.db.load_data(filter_params)
+        try:
+            data = self.db.load_data(filter_params)
+        except RuntimeError as e:
+            raise
 
         if not data:  # проверка на наличие данных
             self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет

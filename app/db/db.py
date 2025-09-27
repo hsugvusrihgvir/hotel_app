@@ -47,6 +47,8 @@ class HotelDB:
 
         return f"Ошибка БД: {str(e)}"
 
+
+
     def create(self): # создание схемы
         self.log.addInfo("Проверка подключения к БД...")
         if not self.conn or not self.cur: # проверяем подключение

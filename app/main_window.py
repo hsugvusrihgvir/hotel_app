@@ -34,12 +34,12 @@ class MainWindow(QMainWindow):  # меню
         self.ui.btnAddRoom.clicked.connect(self.on_add_room) # добавление комнаты
         self.ui.btnAddStays.clicked.connect(self.on_add_stays) # ввсти данные
 
-        self.ui.btnUpdate.clicked.connect(self.on_update) # обновить
         self.ui.btnOpenLog.clicked.connect(self.on_open_log) # открыть лог файл
         self.ui.btnAbout.clicked.connect(self.on_about) # о приложении
         self.ui.btnExit.clicked.connect(self.close) # закрыть
 
         self.on_connect()
+
 
     def _info(self, text: str) -> None: # открытие окна с передаваемой информацией
         QMessageBox.information(self, "Информация", text)
@@ -55,15 +55,19 @@ class MainWindow(QMainWindow):  # меню
             try:
                 self.db.connect()
                 self.connected = True # подключение успешно
-                self.log.addInfo(f"Подключение к БД прошло успешно.")
+                self._info(f"Подключение к БД прошло успешно.")
             except RuntimeError as e:
                 self.connected = False
                 self._error(f"Не удалось подключиться:\n{e}")
-                return
+            return
         QMessageBox.information(self, "Информация", "Подключение уже выполнено.")
 
     @Slot()
     def on_create_schema(self) -> None: # создать схему
+        if not self.connected:  # проверка подключения к базе данных
+            self._error("Сначала подключитесь к базе данных")
+            return
+
         try:
             self.db.create() # создание схемы (таблиц)
             self._info("Создание схемы прошло успешно")
@@ -83,6 +87,10 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_add_client(self) -> None:  # ввести данные
+        if not self.connected: # проверка подключения к базе данных
+            self._error("Сначала подключитесь к базе данных")
+            return
+
         dlg = EnterDataDialog(self)  # открытие диалогового окна для ввода данных
         dlg.setMode(EnterDataDialog.MODE_CLIENT) # выбор режима (данные для клиента, комнаты или бронирования)
         if dlg.exec(): # при закрытии
@@ -96,6 +104,10 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_add_room(self) -> None:  # аналогично
+        if not self.connected: # проверка подключения к базе данных
+            self._error("Сначала подключитесь к базе данных")
+            return
+
         dlg = EnterDataDialog(self, db=self.db)
         dlg.setMode(EnterDataDialog.MODE_ROOM)
         if dlg.exec():
@@ -108,11 +120,17 @@ class MainWindow(QMainWindow):  # меню
 
     @Slot()
     def on_add_stays(self) -> None:  # аналогично
+        if not self.connected: # проверка подключения к базе данных
+            self._error("Сначала подключитесь к базе данных")
+            return
+
+        clients = None; rooms = None
         try:
             clients = self.db.find_clients()
             rooms = self.db.find_rooms()
         except RuntimeError as e:
             self._error("Ошибка с поиском данных в базе данных. Проверьте подключение.")
+            return
         dlg = EnterDataDialog(self, clients=clients, rooms=rooms)
         dlg.setMode(EnterDataDialog.MODE_STAY)
         if dlg.exec():
@@ -122,11 +140,6 @@ class MainWindow(QMainWindow):  # меню
                 self._info(f"Добавление бронирования клиентом {data['client_id']} комнаты {data['room_id']} прошло успешно")
             except RuntimeError as e:
                 self._error(f"Не удалось добавить: {e}")
-
-
-    @Slot()
-    def on_update(self) -> None: # обновить
-        pass
 
 
     @Slot()
@@ -153,7 +166,4 @@ class MainWindow(QMainWindow):  # меню
         finally:
             super().closeEvent(event)
 
-
-    def _confirm(self, text: str) -> bool:
-        pass
 
