@@ -1,41 +1,45 @@
-![[Pasted image 20250913171025.png]]
-## comfort_enum
+## `comfort_enum`
 Перечисление уровней комфортности номера.  
-Возможные значения: standard, semi_lux, lux.
+**Значения:** `standard`, `semi_lux`, `lux`.
 
 ---
 
-## clients
+## `clients`
 Хранит информацию о клиентах гостиницы.  
+- `id` `SERIAL PRIMARY KEY` — идентификатор клиента  
+- `last_name` `VARCHAR(40) NOT NULL` — фамилия  
+- `first_name` `VARCHAR(40) NOT NULL` — имя  
+- `patronymic` `VARCHAR(40)` — отчество (может быть `NULL`)  
+- `passport` `VARCHAR(11) UNIQUE NOT NULL` — паспорт (уникально)  
+- `comment` `TEXT` — примечание  
+- `is_regular` `BOOLEAN NOT NULL DEFAULT FALSE` — постоянный клиент?  
+- `registered` `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` — дата/время регистрации
 
-- id SERIAL PRIMARY KEY 
-- last_name VARCHAR(40) NOT NULL (фамилия клиента)  
-- first_name VARCHAR(40) NOT NULL (имя клиента)  
-- patronymic VARCHAR(40) (отчество клиента, может быть NULL)  
-- passport VARCHAR(11) UNIQUE NOT NULL (паспортные данные, уникальные для каждого клиента)  
-- comment TEXT (дополнительный комментарий о клиенте)  
-- is_regular BOOLEAN NOT NULL DEFAULT false (является ли клиент постоянным)  
-- registered TIMESTAMP NOT NULL (дата и время регистрации клиента в системе)
+---
+
+## `rooms`
+Хранит информацию о номерах.  
+- `id` `SERIAL PRIMARY KEY` — идентификатор номера  
+- `room_number` `INT UNIQUE NOT NULL` — номер комнаты  
+- `capacity` `INT NOT NULL CHECK (capacity > 0)` — вместимость (кол-во мест)  
+- `comfort` `comfort_enum NOT NULL` — комфорт (`standard|semi_lux|lux`)  
+- `price` `NUMERIC(10,2) NOT NULL CHECK (price > 0)` — цена/сутки  
+- `amenities` `TEXT[] DEFAULT '{}' CHECK (cardinality(amenities) <= 10)` — массив удобств (массив обязателен по ТЗ)
 
 ---
 
-## rooms
-Хранит информацию о номерах гостиницы.  
+## `stays`
+Хранит заселения и бронирования.  
+- `id` `SERIAL PRIMARY KEY` — идентификатор записи  
+- `client_id` `INT NOT NULL` `REFERENCES clients(id) ON DELETE CASCADE ON UPDATE CASCADE` — клиент  
+- `room_id` `INT NOT NULL` `REFERENCES rooms(id) ON DELETE RESTRICT ON UPDATE CASCADE` — номер  
+- `check_in` `DATE NOT NULL` — дата заезда  
+- `check_out` `DATE NOT NULL` — дата выезда  
+- `is_paid` `BOOLEAN NOT NULL DEFAULT FALSE` — **оплачено?** (`TRUE/FALSE`)  
+- `note` `TEXT` — примечание  
+- `status` `BOOLEAN NOT NULL DEFAULT TRUE` — статус брони/проживания (`TRUE` — активно, `FALSE` — завершено)  
+- `ck_dates` `CHECK (check_out > check_in)` — защита от некорректных дат
 
-- id SERIAL PRIMARY KEY 
-- room_number INT UNIQUE NOT NULL (номер комнаты в гостинице)  
-- capacity INT NOT NULL CHECK (capacity > 0) (вместимость номера, количество мест)  
-- comfort comfort_enum NOT NULL (уровень комфортности: стандарт, полулюкс, люкс)  
-- price NUMERIC(10,2) NOT NULL CHECK (price > 0) (стоимость проживания за сутки)
-
----
-## stays
-Хранит информацию о заселениях и бронированиях.  
-
-- client_id INT NOT NULL FOREIGN KEY → clients(id) (клиент, который заселяется или бронирует)  
-- room_id INT NOT NULL FOREIGN KEY → rooms(id) (номер, в который заселяется клиент)  
-- check_in DATE NOT NULL (дата заселения)  
-- check_out DATE NOT NULL(дата выезда)  
-- is_paid BOOLEAN NOT NULL DEFAULT false (статус: активно = true, завершено = false)  
-- note TEXT (примечание) 
-- status BOOLEAN NOT NULL DEFAULT true (статус: активно = true, завершено = false)  
+> Обоснование политик FK:  
+> — Для `client_id` используем `ON DELETE CASCADE`, чтобы при удалении клиента автоматически удалялись его бронирования.  
+> — Для `room_id` — `ON DELETE RESTRICT`, чтобы **база не позволяла** удалить номер при наличии связанных заселений.

@@ -136,6 +136,9 @@ class MainWindow(QMainWindow):  # меню
         if dlg.exec():
             try:
                 data = dlg.payload
+                if data["client_id"] not in clients or data["room_id"] not in rooms:
+                    self._error("Неправильные данные. Пожалуйста, убедитесь, что выбираете комнату и клиента среди представленных.")
+                    return
                 self.db.enterDataStays(data)
                 self._info(f"Добавление бронирования клиентом {data['client_id']} комнаты {data['room_id']} прошло успешно")
             except RuntimeError as e:
