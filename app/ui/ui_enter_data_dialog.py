@@ -87,13 +87,19 @@ QMenu::item:selected { background-color: #2e7d6b; color: white; }
         self.lyClient.setObjectName(u"lyClient")
         self.edLast = QLineEdit(self.pgClient); self.edLast.setObjectName(u"edLast")
         self.edLast.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']+$"), self.edLast))
+            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']{39}+$"), self.edLast))
+        self.edLast.setPlaceholderText("Не более 39 символов")
+
         self.edFirst = QLineEdit(self.pgClient); self.edFirst.setObjectName(u"edFirst")
         self.edFirst.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']+$"), self.edFirst))
+            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']{39}+$"), self.edFirst))
+        self.edFirst.setPlaceholderText("Не более 39 символов")
+
         self.edPatr = QLineEdit(self.pgClient); self.edPatr.setObjectName(u"edPatr")
         self.edPatr.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']+$"), self.edPatr))
+            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']{39}+$"), self.edPatr))
+        self.edPatr.setPlaceholderText("Не более 39 символов")
+
         self.edPassport = QLineEdit(self.pgClient); self.edPassport.setObjectName(u"edPassport")
         self.edPassport.setObjectName(u"edPassport")
         self.edPassport.setMaxLength(11)
@@ -101,6 +107,9 @@ QMenu::item:selected { background-color: #2e7d6b; color: white; }
         self.edPassport.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d{4} \d{6}$"), self.edPassport))
                                            
         self.edComment = QLineEdit(self.pgClient); self.edComment.setObjectName(u"edComment")
+        self.edComment.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"^.{0, 150}+$"), self.edComment))
+        self.edComment.setPlaceholderText("Не более 150 символов")
         self.cbRegular = QCheckBox(self.pgClient); self.cbRegular.setObjectName(u"cbRegular")
         self.dtRegistered = QDateTimeEdit(self.pgClient); self.dtRegistered.setObjectName(u"dtRegistered")
         self.dtRegistered.setCalendarPopup(True)
@@ -145,6 +154,9 @@ QMenu::item:selected { background-color: #2e7d6b; color: white; }
         self.deIn = QDateEdit(self.pgStay); self.deIn.setCalendarPopup(True); self.deIn.setDate(QDate.currentDate())
         self.deOut = QDateEdit(self.pgStay); self.deOut.setCalendarPopup(True); self.deOut.setDate(QDate.currentDate().addDays(1))
         self.edNote = QLineEdit(self.pgStay); self.edNote.setObjectName(u"edNote")
+        self.edNote.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"^.{0, 150}+$"), self.edNote))
+        self.edNote.setPlaceholderText("Не более 150 символов")
         self.cbPaid = QCheckBox(self.pgStay); self.cbPaid.setObjectName(u"cbPaid")
         self.cbStatus = QCheckBox(self.pgStay); self.cbStatus.setObjectName(u"cbStatus"); self.cbStatus.setChecked(True)
 

@@ -108,7 +108,7 @@ class FilterWindow(QDialog):
 
     def setup_ui(self):
         layout = QVBoxLayout(self)  # создание вертикального layout
-
+        layout.addWidget(QLabel("! Для применения фильтра выберите его с помощью галочки слева !"))
         self.setup_sort(layout)
         self.setup_date(layout)
         self.setup_comfort(layout)
