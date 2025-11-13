@@ -13,6 +13,7 @@ from PySide6.QtCore import QUrl
 
 from app.ui.data_window import DataWindow
 from app.ui.about import AboutDialog
+from app.ui.alter_table_window import AlterTableWindow
 
 class MainWindow(QMainWindow):  # меню
     def __init__(self) -> None:
@@ -29,6 +30,8 @@ class MainWindow(QMainWindow):  # меню
         self.ui.btnConnect.clicked.connect(self.on_connect) # соединение с бд
         self.ui.btnCreateSchema.clicked.connect(self.on_create_schema) #  создание схемы
         self.ui.btnShowData.clicked.connect(self.on_show_data) # показать данные
+        # изменение структуры БД (ALTER TABLE)
+        self.ui.btnAlterTable.clicked.connect(self.on_alter_table)
 
         self.ui.btnAddClient.clicked.connect(self.on_add_client) # добавление клиента
         self.ui.btnAddRoom.clicked.connect(self.on_add_room) # добавление комнаты
@@ -158,6 +161,17 @@ class MainWindow(QMainWindow):  # меню
     def on_about(self) -> None: # о приложении
         dlg = AboutDialog(self)
         dlg.exec()
+
+
+    @Slot()
+    def on_alter_table(self) -> None:
+        if not self.connected:
+            self._error("Сначала подключитесь к базе данных")
+            return
+
+        dlg = AlterTableWindow(self, self.db)
+        dlg.exec()
+
 
     def closeEvent(self, event):
         try:

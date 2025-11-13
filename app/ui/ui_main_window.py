@@ -85,20 +85,23 @@ class Ui_MainWindow(object):
 "    background: #28715f;\n"
 "}\n"
 "\n"
-"QPushButton#btnCreateSchema,\n"
-"QPushButton#btnShowData {\n"
+"QPushButton#btnCreateSchema,"
+"QPushButton#btnShowData,\n"
+"QPushButton#btnAlterTable {\n"
 "    background: #caa55b;\n"
-"    color: #171a1d;\n"
-"    border: 1px solid #9b7d3f;\n"
+"    color: #171a1d; \n"
+"    border: 1px solid #9b7d3f; \n"
 "}\n"
-"QPushButton#btnCreateSchema:hover,\n"
-"QPushButton#btnShowData:hover {\n"
-"    background: #d6b473;\n"
-"}\n"
-"QPushButton#btnCreateSchema:pressed,\n"
-"QPushButton#btnShowData:pressed {\n"
-"    background: #b89149;\n"
-"}\n"
+"QPushButton#btnCreateSchema:hover, \n"
+"QPushButton#btnShowData:hover, \n"
+"QPushButton#btnAlterTable:hover { \n"
+"    background: #d6b473; \n"
+"} \n"
+"QPushButton#btnCreateSchema:pressed, \n"
+"QPushButton#btnShowData:pressed, \n"
+"QPushButton#btnAlterTable:pressed { \n"
+"    background: #b89149; \n"
+"} \n"
 "\n"
 "QPushButton#btnOpenLog, QPushButton#btnAbout, QPushButton#btnExit {\n"
 "    background: #242a30;\n"
@@ -197,6 +200,11 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.btnCreateSchema)
 
+        # новая кнопка для ALTER TABLE
+        self.btnAlterTable = QPushButton(self.centralwidget)
+        self.btnAlterTable.setObjectName(u"btnAlterTable")
+
+        self.horizontalLayout_2.addWidget(self.btnAlterTable)
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
 
@@ -226,5 +234,6 @@ class Ui_MainWindow(object):
         self.btnAddStays.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u0438\u0435", None))
         self.btnConnect.setText(QCoreApplication.translate("MainWindow", u"Подключиться", None))
         self.btnCreateSchema.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0441\u0445\u0435\u043c\u0443", None))
+        self.btnAlterTable.setText(QCoreApplication.translate("MainWindow", u"Изменить структуру БД", None))
     # retranslateUi
 
