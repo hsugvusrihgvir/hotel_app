@@ -8,6 +8,6 @@ def main():
     w.setWindowTitle("Гостиница")
     w.show()
     sys.exit(app.exec())
-
+#hiiii
 if __name__ == "__main__":
     main()
