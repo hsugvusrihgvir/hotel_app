@@ -1,186 +1,122 @@
-from app.ui.ui_enter_data_dialog import EnterDataDialog # открытие, диалоговое окно с выбором режима
+# app/main_window.py — связывает UI и логику
 
-from PySide6.QtWidgets import (
-    QMainWindow, QMessageBox, )
-from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QMainWindow, QMessageBox
 
-from app.ui.ui_main_window import Ui_MainWindow
-from app.db.db import HotelDB
-from app.log.log import HotelLog
-
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtCore import QUrl
-
+from app.ui.ui_main_window import UIMainWindow
+from app.ui.enter_data_dialog import EnterDataDialog
+from app.ui.join_master_dialog import JoinMasterDialog
 from app.ui.data_window import DataWindow
-from app.ui.about import AboutDialog
 from app.ui.alter_table_window import AlterTableWindow
+from app.ui.types_window import TypesWindow  # на будущее, если понадобится кнопка
+from app.log.log import app_logger
+from PySide6.QtWidgets import QDialog
 
-class MainWindow(QMainWindow):  # меню
-    def __init__(self) -> None:
+
+class MainWindow(QMainWindow):
+    def __init__(self, db):
         super().__init__()
+        self.db = db
 
-        self.log = HotelLog()
-        self.db = HotelDB() # создания объекта класса для взаимодействия с бд
-        self.connected = False # подключение к бд изначально false
+        self.ui = UIMainWindow()
+        self.ui.setup_ui(self)
 
-        self.ui = Ui_MainWindow() # создание объекта меню
-        self.ui.setupUi(self)
+        self._connect_signals()
 
-        # подключение кнопок для
-        self.ui.btnConnect.clicked.connect(self.on_connect) # соединение с бд
-        self.ui.btnCreateSchema.clicked.connect(self.on_create_schema) #  создание схемы
-        self.ui.btnShowData.clicked.connect(self.on_show_data) # показать данные
-        # изменение структуры БД (ALTER TABLE)
-        self.ui.btnAlterTable.clicked.connect(self.on_alter_table)
+    # ---------------------------------------------------
+    # связывание кнопок и логики
+    # ---------------------------------------------------
 
-        self.ui.btnAddClient.clicked.connect(self.on_add_client) # добавление клиента
-        self.ui.btnAddRoom.clicked.connect(self.on_add_room) # добавление комнаты
-        self.ui.btnAddStays.clicked.connect(self.on_add_stays) # ввсти данные
+    def _connect_signals(self):
+        self.ui.btn_create_schema.clicked.connect(self.on_create_schema)
+        self.ui.btn_add_data.clicked.connect(self.on_add_data)
+        self.ui.btn_show_data.clicked.connect(self.on_show_data)
+        self.ui.btn_alter.clicked.connect(self.on_alter)
+        self.ui.btn_reset_schema.clicked.connect(self.on_reset_schema)
 
-        self.ui.btnOpenLog.clicked.connect(self.on_open_log) # открыть лог файл
-        self.ui.btnAbout.clicked.connect(self.on_about) # о приложении
-        self.ui.btnExit.clicked.connect(self.close) # закрыть
+    # ---------------------------------------------------
+    # обработчики
+    # ---------------------------------------------------
 
-        self.on_connect()
+    def on_create_schema(self):
+        """запуск SQL-скрипта schema.sql"""
+        try:
+            with open("db/schema.sql", "r", encoding="utf-8") as f:
+                script = f.read()
 
+            self.db.execute_ddl(script)
+            QMessageBox.information(self, "Готово", "Схема успешно создана.")
+            app_logger.info("schema created")
 
-    def _info(self, text: str) -> None: # открытие окна с передаваемой информацией
-        QMessageBox.information(self, "Информация", text)
-        self.log.addInfo(text)
+        except Exception as e:
+            self._error(f"Ошибка создания схемы:\n{e}")
 
-    def _error(self, text: str) -> None: # открытие окна с передаваемой ошибкой
+    def on_add_data(self):
+        """модальное окно для вставки данных"""
+        try:
+            dlg = EnterDataDialog(self.db, self)
+            dlg.exec()
+        except Exception as e:
+            self._error(f"Ошибка при добавлении данных:\n{e}")
+
+    def on_show_data(self):
+        """мастер JOIN → окно просмотра данных"""
+        try:
+            # сначала мастер выбора таблиц / полей / типа JOIN
+            join_dlg = JoinMasterDialog(self.db, self)
+            if join_dlg.exec() != QDialog.Accepted:
+                return
+
+            join_info = {
+                "table1": join_dlg.table1,
+                "table2": join_dlg.table2,
+                "col1": join_dlg.col1,
+                "col2": join_dlg.col2,
+                "join_type": join_dlg.join_type,
+                "selected_columns": join_dlg.selected_columns,
+            }
+
+            wnd = DataWindow(self.db, join_info, self)
+            wnd.show()
+
+        except Exception as e:
+            self._error(f"Ошибка загрузки данных:\n{e}")
+
+    def on_alter(self):
+        """окно изменения структуры таблиц (ALTER TABLE + типы)"""
+        try:
+            dlg = AlterTableWindow(self.db, self)
+            dlg.exec()
+        except Exception as e:
+            self._error(f"Ошибка ALTER TABLE:\n{e}")
+
+    # ---------------------------------------------------
+    # внутренние функции
+    # ---------------------------------------------------
+
+    def _error(self, text: str):
+        """одинаковый вывод ошибок + лог"""
         QMessageBox.critical(self, "Ошибка", text)
-        self.log.addError(text)
+        app_logger.error(text)
 
-    @Slot()
-    def on_connect(self) -> None:  # соединение с бд
-        if not self.connected:
-            try:
-                self.db.connect()
-                self.connected = True # подключение успешно
-                self._info(f"Подключение к БД прошло успешно.")
-            except RuntimeError as e:
-                self.connected = False
-                self._error(f"Не удалось подключиться:\n{e}")
-            return
-        QMessageBox.information(self, "Информация", "Подключение уже выполнено.")
+    def on_reset_schema(self):
+        """подтверждение и полный сброс базы через schema.sql"""
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение сброса",
+            "Все данные будут удалены и схема будет пересоздана.\nПродолжить?",
+            QMessageBox.Yes | QMessageBox.No
+        )
 
-    @Slot()
-    def on_create_schema(self) -> None: # создать схему
-        if not self.connected:  # проверка подключения к базе данных
-            self._error("Сначала подключитесь к базе данных")
+        if reply != QMessageBox.Yes:
             return
 
         try:
-            self.db.create() # создание схемы (таблиц)
-            self._info("Создание схемы прошло успешно")
-        except RuntimeError as e:
-            self._error(f"Не удалось создать схему:\n{e}")
+            with open("db/reset.sql", "r", encoding="utf-8") as f:
+                script = f.read()
 
+            self.db.execute_ddl(script)
+            QMessageBox.information(self, "Сброс", "База данных успешно сброшена.")
+            app_logger.info("schema reset by user")
 
-
-    @Slot()
-    def on_show_data(self) -> None: # показать данные
-        if not self.connected: # проверка подключения к базе данных
-            self._error("Сначала подключитесь к базе данных")
-            return
-        data_window = DataWindow(self, self.db) # создается и показывается модальное окно
-        data_window.exec_() # блок родительского окна до закрытия
-
-
-    @Slot()
-    def on_add_client(self) -> None:  # ввести данные
-        if not self.connected: # проверка подключения к базе данных
-            self._error("Сначала подключитесь к базе данных")
-            return
-
-        dlg = EnterDataDialog(self)  # открытие диалогового окна для ввода данных
-        dlg.setMode(EnterDataDialog.MODE_CLIENT) # выбор режима (данные для клиента, комнаты или бронирования)
-        if dlg.exec(): # при закрытии
-            try:
-                data = dlg.payload # данные из окна
-                self.db.enterDataClient(data) # передача данных в класс для работы с бд
-                self._info(f"Добавление клиента [{data['last_name']} {data['first_name']} {data['patronymic']}, {data['passport']}] прошло успешно")
-            except RuntimeError as e:
-                self._error(f"Не удалось добавить клиента: {e}")
-
-
-    @Slot()
-    def on_add_room(self) -> None:  # аналогично
-        if not self.connected: # проверка подключения к базе данных
-            self._error("Сначала подключитесь к базе данных")
-            return
-
-        dlg = EnterDataDialog(self, db=self.db)
-        dlg.setMode(EnterDataDialog.MODE_ROOM)
-        if dlg.exec():
-            try:
-                data = dlg.payload
-                self.db.enterDataRooms(data)
-                self._info(f"Добавление комнаты {data['room_number']} прошло успешно")
-            except RuntimeError as e:
-                self._error(f"Не удалось добавить комнату:\n{e}")
-
-    @Slot()
-    def on_add_stays(self) -> None:  # аналогично
-        if not self.connected: # проверка подключения к базе данных
-            self._error("Сначала подключитесь к базе данных")
-            return
-
-        clients = None; rooms = None
-        try:
-            clients = self.db.find_clients()
-            rooms = self.db.find_rooms()
-        except RuntimeError as e:
-            self._error("Ошибка с поиском данных в базе данных. Проверьте подключение.")
-            return
-        dlg = EnterDataDialog(self, clients=clients, rooms=rooms)
-        dlg.setMode(EnterDataDialog.MODE_STAY)
-        if dlg.exec():
-            try:
-                data = dlg.payload
-                if data["client_id"] not in clients or data["room_id"] not in rooms:
-                    self._error("Неправильные данные. Пожалуйста, убедитесь, что выбираете комнату и клиента среди представленных.")
-                    return
-                self.db.enterDataStays(data)
-                self._info(f"Добавление бронирования клиентом {data['client_id']} комнаты {data['room_id']} прошло успешно")
-            except RuntimeError as e:
-                self._error(f"Не удалось добавить: {e}")
-
-
-    @Slot()
-    def on_open_log(self) -> None: # открыть лог файл
-        try:
-            path = self.log.FILE
-            QDesktopServices.openUrl(QUrl.fromLocalFile(path))
         except Exception as e:
-            self._error(f"Не удалось открыть лог-файл: {e}")
-
-
-    @Slot()
-    def on_about(self) -> None: # о приложении
-        dlg = AboutDialog(self)
-        dlg.exec()
-
-
-    @Slot()
-    def on_alter_table(self) -> None:
-        if not self.connected:
-            self._error("Сначала подключитесь к базе данных")
-            return
-
-        dlg = AlterTableWindow(self, self.db)
-        dlg.exec()
-
-
-    def closeEvent(self, event):
-        try:
-            if self.connected:
-                self.db.close()
-                self.connected = False
-        except Exception as e:
-            self._error(f"Ошибка при закрытии БД: {e}")
-        finally:
-            super().closeEvent(event)
-
-
+            self._error(f"Ошибка при сбросе базы:\n{e}")

@@ -1,239 +1,119 @@
-# -*- coding: utf-8 -*-
-
-################################################################################
-## Form generated from reading UI file 'main_window.ui'
-##
-## Created by: Qt User Interface Compiler version 6.9.2
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
-
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QMainWindow, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
-    QVBoxLayout, QWidget)
-
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(800, 600)
-        MainWindow.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        MainWindow.setStyleSheet(u"/* \n"
-"   Palette:\n"
-"   - bg-dark      #171a1d\n"
-"   - panel        #20252a\n"
-"   - panel-2      #242a30\n"
-"   - text         #e8e6e3\n"
-"   - text-dim     #b8b4ae\n"
-"   - gold         #caa55b\n"
-"   - gold-dark    #9b7d3f\n"
-"   - emerald      #2e7d6b\n"
-"   - red          #c45b5b\n"
-"   - focus        #6fbfa7\n"
-" */\n"
-"\n"
-"QMainWindow, QWidget#centralwidget {\n"
-"    background: #171a1d;\n"
-"    color: #e8e6e3;\n"
-"    font-family: \"Segoe UI\", \"Inter\", \"Roboto\", Arial;\n"
-"    font-size: 14px;\n"
-"}\n"
-"\n"
-"/* \u041a\u043d\u043e\u043f\u043a\u0438 \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e */\n"
-"QPushButton {\n"
-"    background: #242a30;\n"
-"    color: #e8e6e3;\n"
-"    border: 1px solid #323a42;\n"
-"    border-radius: 12px;\n"
-"    padding: 8px 16px;\n"
-"    min-height: 34px;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background: #2b3238;\n"
-"    border-color: #3a444e;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background: #23292f;\n"
-"    border-color: #46525e;\n"
-"}\n"
-"QP"
-                        "ushButton:disabled {\n"
-"    color: #7b7e82;\n"
-"    background: #1f2327;\n"
-"    border-color: #2a3036;\n"
-"}\n"
-"\n"
-"QPushButton#btnConnect,\n"
-"QPushButton#btnEnterData {\n"
-"    background: #2e7d6b;\n"
-"    border: 1px solid #2c6f60;\n"
-"}\n"
-"QPushButton#btnConnect:hover,\n"
-"QPushButton#btnEnterData:hover {\n"
-"    background: #338a76;\n"
-"    border-color: #2f7b6a;\n"
-"}\n"
-"QPushButton#btnConnect:pressed,\n"
-"QPushButton#btnEnterData:pressed {\n"
-"    background: #28715f;\n"
-"}\n"
-"\n"
-"QPushButton#btnCreateSchema,"
-"QPushButton#btnShowData,\n"
-"QPushButton#btnAlterTable {\n"
-"    background: #caa55b;\n"
-"    color: #171a1d; \n"
-"    border: 1px solid #9b7d3f; \n"
-"}\n"
-"QPushButton#btnCreateSchema:hover, \n"
-"QPushButton#btnShowData:hover, \n"
-"QPushButton#btnAlterTable:hover { \n"
-"    background: #d6b473; \n"
-"} \n"
-"QPushButton#btnCreateSchema:pressed, \n"
-"QPushButton#btnShowData:pressed, \n"
-"QPushButton#btnAlterTable:pressed { \n"
-"    background: #b89149; \n"
-"} \n"
-"\n"
-"QPushButton#btnOpenLog, QPushButton#btnAbout, QPushButton#btnExit {\n"
-"    background: #242a30;\n"
-"}\n"
-"QPushButton#btnExit:hover { bor"
-                        "der-color: #c45b5b; color: #ffdddd; }\n"
-"")
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.btnExit = QPushButton(self.centralwidget)
-        self.btnExit.setObjectName(u"btnExit")
-        self.btnExit.setMinimumSize(QSize(225, 52))
-        self.btnExit.setMaximumSize(QSize(200, 50))
-
-        self.horizontalLayout.addWidget(self.btnExit)
-
-        self.btnAbout = QPushButton(self.centralwidget)
-        self.btnAbout.setObjectName(u"btnAbout")
-        self.btnAbout.setMinimumSize(QSize(225, 52))
-        self.btnAbout.setMaximumSize(QSize(225, 50))
-
-        self.horizontalLayout.addWidget(self.btnAbout)
-
-        self.btnOpenLog = QPushButton(self.centralwidget)
-        self.btnOpenLog.setObjectName(u"btnOpenLog")
-        self.btnOpenLog.setMinimumSize(QSize(225, 52))
-        self.btnOpenLog.setMaximumSize(QSize(225, 50))
-
-        self.horizontalLayout.addWidget(self.btnOpenLog)
+# ui_main_window.py — правильный UI-класс для QMainWindow
+from PySide6.QtWidgets import (
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+    QFrame, QSizePolicy, QWidget
+)
+from PySide6.QtGui import QFont, QColor, QPalette
+from PySide6.QtCore import Qt
 
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
+class UIMainWindow(object):
+    """генератор UI для главного окна"""
 
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+    def setup_ui(self, MainWindow):
+        MainWindow.setWindowTitle("AI-DDOS Lab — DB Manager")
+        MainWindow.resize(960, 620)
+        self._apply_dark_theme(MainWindow)
 
-        self.horizontalLayout_3.addItem(self.horizontalSpacer)
+        central = QWidget()
+        MainWindow.setCentralWidget(central)
 
-        self.verticalLayout_3 = QVBoxLayout()
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.btnShowData = QPushButton(self.centralwidget)
-        self.btnShowData.setObjectName(u"btnShowData")
-        self.btnShowData.setMinimumSize(QSize(300, 52))
+        main_layout = QVBoxLayout(central)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
 
-        self.verticalLayout_3.addWidget(self.btnShowData)
+        # -------- header --------
+        header = QLabel("Управление базой данных")
+        header.setFont(QFont("Segoe UI", 20, QFont.Bold))
+        header.setAlignment(Qt.AlignLeft)
+        header.setStyleSheet("color: #e0e0e0;")
+        main_layout.addWidget(header)
 
+        # -------- блок 1: операции со схемой --------
+        schema_frame = self._block("Работа со схемой")
+        self.btn_create_schema = self._button("Создать схему и таблицы")
+        schema_frame.layout().addWidget(self.btn_create_schema)
+        main_layout.addWidget(schema_frame)
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_3)
+        self.btn_reset_schema = self._button("Сбросить базу")
+        schema_frame.layout().addWidget(self.btn_reset_schema)
 
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        # -------- блок 2: операции с данными --------
+        data_frame = self._block("Работа с данными")
+        self.btn_add_data = self._button("Внести данные")
+        self.btn_show_data = self._button("Показать данные")
+        data_frame.layout().addWidget(self.btn_add_data)
+        data_frame.layout().addWidget(self.btn_show_data)
+        main_layout.addWidget(data_frame)
 
-        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+        # -------- блок 3: ALTER TABLE --------
+        alter_frame = self._block("ALTER TABLE")
+        self.btn_alter = self._button("Изменить структуру")
+        alter_frame.layout().addWidget(self.btn_alter)
+        main_layout.addWidget(alter_frame)
 
-        self.verticalLayout = QVBoxLayout()
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.btnAddClient = QPushButton(self.centralwidget)
-        self.btnAddClient.setObjectName(u"btnAddClient")
-        self.btnAddClient.setMinimumSize(QSize(0, 52))
+        # -------- footer --------
+        footer = QLabel("MLOps Mini-System • PostgreSQL • PySide6")
+        footer.setAlignment(Qt.AlignCenter)
+        footer.setStyleSheet("color: #777; font-size: 12px; margin-top: 20px;")
+        main_layout.addWidget(footer)
 
-        self.verticalLayout.addWidget(self.btnAddClient)
+    # =======================
+    # helpers
+    # =======================
 
-        self.btnAddRoom = QPushButton(self.centralwidget)
-        self.btnAddRoom.setObjectName(u"btnAddRoom")
+    def _apply_dark_theme(self, MainWindow):
+        """тёмная палитра"""
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(20, 22, 25))
+        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
+        palette.setColor(QPalette.Base, QColor(30, 32, 36))
+        palette.setColor(QPalette.Button, QColor(45, 47, 52))
+        palette.setColor(QPalette.ButtonText, QColor(240, 240, 240))
+        palette.setColor(QPalette.Text, QColor(230, 230, 230))
+        palette.setColor(QPalette.Highlight, QColor(60, 90, 200))
+        palette.setColor(QPalette.HighlightedText, QColor(255, 255, 255))
+        MainWindow.setPalette(palette)
+        MainWindow.setStyleSheet("background-color: #141618;")
 
-        self.verticalLayout.addWidget(self.btnAddRoom)
+    def _block(self, title: str) -> QFrame:
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setStyleSheet("""
+            QFrame {
+                background-color: #1d1f22;
+                border: 1px solid #333;
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(10)
 
-        self.btnAddStays = QPushButton(self.centralwidget)
-        self.btnAddStays.setObjectName(u"btnAddStays")
+        lbl = QLabel(title)
+        lbl.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        lbl.setStyleSheet("color: #d0d0d0;")
+        layout.addWidget(lbl)
+        return frame
 
-        self.verticalLayout.addWidget(self.btnAddStays)
-
-
-        self.horizontalLayout_3.addLayout(self.verticalLayout)
-
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
-
-
-        self.verticalLayout_2.addLayout(self.horizontalLayout_3)
-
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.btnConnect = QPushButton(self.centralwidget)
-        self.btnConnect.setObjectName(u"btnConnect")
-
-        self.horizontalLayout_2.addWidget(self.btnConnect)
-
-        self.btnCreateSchema = QPushButton(self.centralwidget)
-        self.btnCreateSchema.setObjectName(u"btnCreateSchema")
-
-        self.horizontalLayout_2.addWidget(self.btnCreateSchema)
-
-        # новая кнопка для ALTER TABLE
-        self.btnAlterTable = QPushButton(self.centralwidget)
-        self.btnAlterTable.setObjectName(u"btnAlterTable")
-
-        self.horizontalLayout_2.addWidget(self.btnAlterTable)
-
-        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
-
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 33))
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
-        MainWindow.setStatusBar(self.statusbar)
-
-        self.retranslateUi(MainWindow)
-
-        QMetaObject.connectSlotsByName(MainWindow)
-    # setupUi
-
-    def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.btnExit.setText(QCoreApplication.translate("MainWindow", u"\u0412\u044b\u0445\u043e\u0434", None))
-        self.btnAbout.setText(QCoreApplication.translate("MainWindow", u"\u041e \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0435", None))
-        self.btnOpenLog.setText(QCoreApplication.translate("MainWindow", u"\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043b\u043e\u0433-\u0444\u0430\u0439\u043b", None))
-        self.btnShowData.setText(QCoreApplication.translate("MainWindow", u"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435", None))
-
-        self.btnAddClient.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043a\u043b\u0438\u0435\u043d\u0442\u0430", None))
-        self.btnAddRoom.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043d\u043e\u043c\u0435\u0440", None))
-        self.btnAddStays.setText(QCoreApplication.translate("MainWindow", u"\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u0438\u0435", None))
-        self.btnConnect.setText(QCoreApplication.translate("MainWindow", u"Подключиться", None))
-        self.btnCreateSchema.setText(QCoreApplication.translate("MainWindow", u"\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u0441\u0445\u0435\u043c\u0443", None))
-        self.btnAlterTable.setText(QCoreApplication.translate("MainWindow", u"Изменить структуру БД", None))
-    # retranslateUi
-
+    def _button(self, text: str) -> QPushButton:
+        btn = QPushButton(text)
+        btn.setMinimumHeight(42)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2b2d31;
+                color: #e0e0e0;
+                border: 1px solid #444;
+                border-radius: 6px;
+                font-size: 15px;
+            }
+            QPushButton:hover {
+                background-color: #35373c;
+                border-color: #666;
+            }
+            QPushButton:pressed {
+                background-color: #232528;
+            }
+        """)
+        return btn

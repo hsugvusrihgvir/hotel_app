@@ -1,531 +1,457 @@
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QScrollArea, QWidget, QGroupBox,
-    QHBoxLayout, QFormLayout, QLabel, QComboBox, QLineEdit,
-    QPushButton, QCheckBox, QMessageBox, QSpacerItem, QSizePolicy
-)
-from PySide6.QtCore import Qt
+# alter_table_window.py — профессиональный модуль ALTER TABLE с поддержкой ENUM и COMPOSITE
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QScrollArea, QWidget, QGroupBox,
-    QHBoxLayout, QFormLayout, QLabel, QComboBox, QLineEdit,
-    QPushButton, QCheckBox, QMessageBox, QSpacerItem, QSizePolicy
+    QDialog, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QPushButton, QLineEdit,
+    QMessageBox, QTableWidget, QTableWidgetItem, QGroupBox
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
+
+from app.log.log import app_logger
 
 
 class AlterTableWindow(QDialog):
-    """
-    Окно изменения структуры таблицы.
-    Полностью переписано под требования КР2.
-    """
-    def __init__(self, parent=None, db=None):
+    """окно изменения структуры таблиц — поддержка ENUM + COMPOSITE"""
+
+    def __init__(self, db, parent=None):
         super().__init__(parent)
+        self.db = db
 
-        if db is None:
-            raise RuntimeError("Ошибка. Нет подключения к БД. Откройте сначала соединение.")
-
-        self.db = db  # объект HotelDB
-        self.setModal(True)  # окно модальное
         self.setWindowTitle("Изменение структуры таблиц")
-        self.resize(650, 800)
+        self.resize(850, 650)
+        self.setModal(True)
 
-        # ==== ОСНОВНОЙ СКРОЛЛ ====
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
+        self._build_ui()
+        self._load_tables()
+        self._load_custom_types()
 
-        inner = QWidget()
-        self.layout = QVBoxLayout(inner)
-        self.layout.setAlignment(Qt.AlignTop)
+    # =====================================================================
+    # UI
+    # =====================================================================
 
-        scroll.setWidget(inner)
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
 
-        main = QVBoxLayout(self)
-        main.addWidget(scroll)
+        # ---------------- header ------------------------
+        title = QLabel("ALTER TABLE — инструменты")
+        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        title.setStyleSheet("color:#e0e0e0; margin-bottom:8px;")
+        layout.addWidget(title)
 
-        # ======================
-        # 1) Выбор таблицы
-        # ======================
-        self.box_table = QComboBox()
-        self.btn_refresh = QPushButton("Обновить")
-        self.btn_refresh.clicked.connect(self.load_tables)
+        # ---------------- select table ------------------
+        table_box = QHBoxLayout()
+        layout.addLayout(table_box)
 
-        gb = QGroupBox("Таблица")
-        fl = QFormLayout()
-        fl.addRow("Выбор:", self.box_table)
-        fl.addRow("", self.btn_refresh)
-        gb.setLayout(fl)
-        self.layout.addWidget(gb)
+        table_box.addWidget(QLabel("Таблица:"))
+        self.cb_table = QComboBox()
+        table_box.addWidget(self.cb_table)
 
-        # Подгружаем таблицы сразу
-        self.load_tables()
+        self.cb_table.currentTextChanged.connect(self._load_columns)
 
-        # ======================
-        # 2) Работа со столбцами
-        # ======================
-        self.build_column_section()
+        # ---------------- group: добавить столбец ------------------
+        gb_add = QGroupBox("Добавить столбец")
+        gb_layout = QHBoxLayout(gb_add)
 
-        # ======================
-        # 3) Ограничения
-        # ======================
-        self.build_unique_section()
-        self.build_check_section()
-        self.build_fk_section()
+        self.add_name = QLineEdit()
+        self.add_name.setPlaceholderText("имя столбца")
 
-        # ======================
-        # 4) Переименовать таблицу
-        # ======================
-        self.build_table_rename_section()
+        self.add_type = QComboBox()
+        self.add_type.currentTextChanged.connect(self._on_type_changed)
 
-        # ======================
-        # Кнопка закрытия
-        # ======================
-        btn_close = QPushButton("Закрыть")
-        btn_close.clicked.connect(self.close)
-        self.layout.addWidget(btn_close)
+        self.btn_add = QPushButton("Добавить")
+        self.btn_add.clicked.connect(self._add_column)
 
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.layout.addSpacerItem(spacer)
+        gb_layout.addWidget(self.add_name)
+        gb_layout.addWidget(self.add_type)
+        gb_layout.addWidget(self.btn_add)
 
-        # обновление при смене таблицы
-        self.box_table.currentIndexChanged.connect(self.refresh_all_blocks)
+        layout.addWidget(gb_add)
 
-    # ------------------------------------------------------------
-    # Загрузка таблиц
-    # ------------------------------------------------------------
-    def load_tables(self):
-        self.box_table.clear()
-        try:
-            tables = self.db.list_tables()
-            self.box_table.addItems(tables)
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", str(e))
+        # ---------------- group: удалить столбец ------------------
+        gb_drop = QGroupBox("Удалить столбец")
+        gb_layout = QHBoxLayout(gb_drop)
 
-    # ------------------------------------------------------------
-    # Построение блока столбцов
-    # ------------------------------------------------------------
-    def build_column_section(self):
-        gb = QGroupBox("Столбцы")
-        lay = QVBoxLayout()
+        self.cb_drop_col = QComboBox()
+        self.btn_drop = QPushButton("Удалить")
+        self.btn_drop.clicked.connect(self._drop_column)
 
-        # список столбцов
-        self.col_list = QComboBox()
+        gb_layout.addWidget(self.cb_drop_col)
+        gb_layout.addWidget(self.btn_drop)
 
-        # --- Добавить столбец ---
-        add_gb = QGroupBox("Добавить столбец")
-        add_fl = QFormLayout()
-        self.add_col_name = QLineEdit()
-        self.add_col_type = QComboBox()
-        self.add_col_type.addItems(self.db.list_types())
-        self.add_col_notnull = QCheckBox("NOT NULL")
+        layout.addWidget(gb_drop)
 
-        btn_add = QPushButton("Добавить")
-        btn_add.clicked.connect(self.add_column)
+        # ---------------- group: переименовать столбец ------------------
+        gb_rename = QGroupBox("Переименовать столбец")
+        gb_layout = QHBoxLayout(gb_rename)
 
-        add_fl.addRow("Имя:", self.add_col_name)
-        add_fl.addRow("Тип:", self.add_col_type)
-        add_fl.addRow("", self.add_col_notnull)
-        add_fl.addRow("", btn_add)
-        add_gb.setLayout(add_fl)
+        self.cb_rename_col = QComboBox()
+        self.rename_new = QLineEdit()
+        self.rename_new.setPlaceholderText("новое имя")
 
-        # --- Удалить столбец ---
-        del_gb = QGroupBox("Удалить столбец")
-        del_fl = QFormLayout()
-        self.del_col = QComboBox()
-        btn_del = QPushButton("Удалить")
-        btn_del.clicked.connect(self.delete_column)
-        del_fl.addRow("Столбец:", self.del_col)
-        del_fl.addRow("", btn_del)
-        del_gb.setLayout(del_fl)
+        self.btn_rename = QPushButton("Переименовать")
+        self.btn_rename.clicked.connect(self._rename_column)
 
-        # --- Переименовать столбец ---
-        ren_gb = QGroupBox("Переименовать столбец")
-        ren_fl = QFormLayout()
-        self.ren_col_old = QComboBox()
-        self.ren_col_new = QLineEdit()
-        btn_ren = QPushButton("Переименовать")
-        btn_ren.clicked.connect(self.rename_column)
-        ren_fl.addRow("Старое имя:", self.ren_col_old)
-        ren_fl.addRow("Новое имя:", self.ren_col_new)
-        ren_fl.addRow("", btn_ren)
-        ren_gb.setLayout(ren_fl)
+        gb_layout.addWidget(self.cb_rename_col)
+        gb_layout.addWidget(self.rename_new)
+        gb_layout.addWidget(self.btn_rename)
 
-        # --- Изменить тип ---
-        type_gb = QGroupBox("Изменить тип")
-        type_fl = QFormLayout()
-        self.type_col = QComboBox()
-        self.type_new = QComboBox()
-        self.type_new.addItems(self.db.list_types())
-        btn_type = QPushButton("Изменить")
-        btn_type.clicked.connect(self.change_type)
-        type_fl.addRow("Столбец:", self.type_col)
-        type_fl.addRow("Новый тип:", self.type_new)
-        type_fl.addRow("", btn_type)
-        type_gb.setLayout(type_fl)
+        layout.addWidget(gb_rename)
 
-        # --- NOT NULL ---
-        nn_gb = QGroupBox("NOT NULL / NULL")
-        nn_fl = QFormLayout()
-        self.nn_col = QComboBox()
-        self.nn_flag = QCheckBox("NOT NULL")
-        btn_nn = QPushButton("Применить")
-        btn_nn.clicked.connect(self.change_notnull)
-        nn_fl.addRow("Столбец:", self.nn_col)
-        nn_fl.addRow("", self.nn_flag)
-        nn_fl.addRow("", btn_nn)
-        nn_gb.setLayout(nn_fl)
+        # ---------------- group: изменить тип ------------------
+        gb_type = QGroupBox("Изменить тип столбца")
+        gb_layout = QVBoxLayout(gb_type)
 
-        lay.addWidget(add_gb)
-        lay.addWidget(del_gb)
-        lay.addWidget(ren_gb)
-        lay.addWidget(type_gb)
-        lay.addWidget(nn_gb)
-        gb.setLayout(lay)
-        self.layout.addWidget(gb)
+        top = QHBoxLayout()
+        gb_layout.addLayout(top)
 
-    # ------------------------------------------------------------
-    # UNIQUE
-    # ------------------------------------------------------------
-    def build_unique_section(self):
-        gb = QGroupBox("UNIQUE")
-        lay = QVBoxLayout()
+        self.cb_type_col = QComboBox()
+        self.cb_new_type = QComboBox()
+        self.cb_new_type.currentTextChanged.connect(self._on_type_changed)
 
-        # добавить UNIQUE
-        add_gb = QGroupBox("Добавить UNIQUE")
-        add_fl = QFormLayout()
-        self.unq_col = QComboBox()
-        btn_add = QPushButton("Добавить")
-        btn_add.clicked.connect(self.add_unique)
-        add_fl.addRow("Столбец:", self.unq_col)
-        add_fl.addRow("", btn_add)
-        add_gb.setLayout(add_fl)
+        self.btn_type = QPushButton("Изменить тип")
+        self.btn_type.clicked.connect(self._change_type)
 
-        # удалить UNIQUE
-        del_gb = QGroupBox("Удалить UNIQUE")
-        del_fl = QFormLayout()
-        self.unq_list = QComboBox()
-        btn_del = QPushButton("Удалить")
-        btn_del.clicked.connect(self.del_unique)
-        del_fl.addRow("Ограничение:", self.unq_list)
-        del_fl.addRow("", btn_del)
-        del_gb.setLayout(del_fl)
+        top.addWidget(self.cb_type_col)
+        top.addWidget(self.cb_new_type)
+        top.addWidget(self.btn_type)
 
-        lay.addWidget(add_gb)
-        lay.addWidget(del_gb)
-        gb.setLayout(lay)
-        self.layout.addWidget(gb)
+        # детальная панель информации о выбранном типе
+        self.type_details = QTableWidget()
+        self.type_details.setColumnCount(2)
+        self.type_details.setHorizontalHeaderLabels(["Поле", "Тип"])
+        self.type_details.horizontalHeader().setStretchLastSection(True)
+        gb_layout.addWidget(self.type_details)
 
-    # ------------------------------------------------------------
-    # CHECK
-    # ------------------------------------------------------------
-    def build_check_section(self):
-        gb = QGroupBox("CHECK")
-        lay = QVBoxLayout()
+        layout.addWidget(gb_type)
 
-        # добавление
-        add_gb = QGroupBox("Добавить CHECK")
-        add_fl = QFormLayout()
-        self.chk_col = QComboBox()
-        self.chk_op = QComboBox()
-        self.chk_op.addItems(["=", "!=", ">", ">=", "<", "<="])
-        self.chk_val = QLineEdit()
-        btn_add = QPushButton("Добавить")
-        btn_add.clicked.connect(self.add_check)
-        add_fl.addRow("Столбец:", self.chk_col)
-        add_fl.addRow("Оператор:", self.chk_op)
-        add_fl.addRow("Значение:", self.chk_val)
-        add_fl.addRow("", btn_add)
-        add_gb.setLayout(add_fl)
+        # ---------------- group: NOT NULL / UNIQUE / CHECK ------------------
+        gb_constraints = QGroupBox("Ограничения")
+        gb_layout = QHBoxLayout(gb_constraints)
 
-        # удаление
-        del_gb = QGroupBox("Удалить CHECK")
-        del_fl = QFormLayout()
-        self.chk_list = QComboBox()
-        btn_del = QPushButton("Удалить")
-        btn_del.clicked.connect(self.del_check)
-        del_fl.addRow("Ограничение:", self.chk_list)
-        del_fl.addRow("", btn_del)
-        del_gb.setLayout(del_fl)
+        # NOT NULL
+        self.cb_nn_col = QComboBox()
+        self.btn_set_nn = QPushButton("SET NOT NULL")
+        self.btn_drop_nn = QPushButton("DROP NOT NULL")
 
-        lay.addWidget(add_gb)
-        lay.addWidget(del_gb)
-        gb.setLayout(lay)
-        self.layout.addWidget(gb)
+        self.btn_set_nn.clicked.connect(lambda: self._set_not_null(True))
+        self.btn_drop_nn.clicked.connect(lambda: self._set_not_null(False))
 
-    # ------------------------------------------------------------
-    # FOREIGN KEY
-    # ------------------------------------------------------------
-    def build_fk_section(self):
-        gb = QGroupBox("FOREIGN KEY")
-        lay = QVBoxLayout()
+        # UNIQUE
+        self.cb_unique_col = QComboBox()
+        self.btn_set_unique = QPushButton("SET UNIQUE")
+        self.btn_drop_unique = QPushButton("DROP UNIQUE")
 
-        # добавление
-        add_gb = QGroupBox("Добавить FK")
-        add_fl = QFormLayout()
-        self.fk_local = QComboBox()
-        self.fk_table = QComboBox()
-        self.fk_ref_col = QComboBox()
-        self.fk_on_del = QComboBox()
-        self.fk_on_del.addItems(["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"])
-        self.fk_on_upd = QComboBox()
-        self.fk_on_upd.addItems(["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"])
+        self.btn_set_unique.clicked.connect(lambda: self._set_unique(True))
+        self.btn_drop_unique.clicked.connect(lambda: self._set_unique(False))
 
-        self.fk_table.currentIndexChanged.connect(self.update_fk_ref_columns)
+        gb_layout.addWidget(self.cb_nn_col)
+        gb_layout.addWidget(self.btn_set_nn)
+        gb_layout.addWidget(self.btn_drop_nn)
 
-        btn_add = QPushButton("Добавить")
-        btn_add.clicked.connect(self.add_fk)
+        gb_layout.addWidget(self.cb_unique_col)
+        gb_layout.addWidget(self.btn_set_unique)
+        gb_layout.addWidget(self.btn_drop_unique)
 
-        add_fl.addRow("Локальный столбец:", self.fk_local)
-        add_fl.addRow("Таблица ссылка:", self.fk_table)
-        add_fl.addRow("Столбец ссылка:", self.fk_ref_col)
-        add_fl.addRow("ON DELETE:", self.fk_on_del)
-        add_fl.addRow("ON UPDATE:", self.fk_on_upd)
-        add_fl.addRow("", btn_add)
-        add_gb.setLayout(add_fl)
+        layout.addWidget(gb_constraints)
 
-        # удаление
-        del_gb = QGroupBox("Удалить FK")
-        del_fl = QFormLayout()
-        self.fk_list = QComboBox()
-        btn_del = QPushButton("Удалить")
-        btn_del.clicked.connect(self.del_fk)
-        del_fl.addRow("Ограничение:", self.fk_list)
-        del_fl.addRow("", btn_del)
-        del_gb.setLayout(del_fl)
+        # ---------------- group: FOREIGN KEY ------------------
+        gb_fk = QGroupBox("FOREIGN KEY")
+        gb_layout = QHBoxLayout(gb_fk)
 
-        lay.addWidget(add_gb)
-        lay.addWidget(del_gb)
-        gb.setLayout(lay)
-        self.layout.addWidget(gb)
+        self.cb_fk_col = QComboBox()        # этот столбец станет FK
+        self.fk_ref_table = QComboBox()     # таблица ссылка
+        self.fk_ref_col = QComboBox()       # столбец в таблице ссылки
 
-    # ------------------------------------------------------------
-    # Переименование таблицы
-    # ------------------------------------------------------------
-    def build_table_rename_section(self):
-        gb = QGroupBox("Переименовать таблицу")
-        fl = QFormLayout()
-        self.new_table_name = QLineEdit()
-        btn = QPushButton("Переименовать")
-        btn.clicked.connect(self.rename_table)
-        fl.addRow("Новое имя:", self.new_table_name)
-        fl.addRow("", btn)
-        gb.setLayout(fl)
-        self.layout.addWidget(gb)
+        self.btn_set_fk = QPushButton("SET FK")
+        self.btn_drop_fk = QPushButton("DROP FK")
 
-    # ------------------------------------------------------------
-    # Обновление столбцов и ограничений
-    # ------------------------------------------------------------
-    def refresh_all_blocks(self):
-        table = self.box_table.currentText()
+        self.btn_set_fk.clicked.connect(self._set_fk)
+        self.btn_drop_fk.clicked.connect(self._drop_fk)
+
+        gb_layout.addWidget(self.cb_fk_col)
+        gb_layout.addWidget(self.fk_ref_table)
+        gb_layout.addWidget(self.fk_ref_col)
+        gb_layout.addWidget(self.btn_set_fk)
+        gb_layout.addWidget(self.btn_drop_fk)
+
+        layout.addWidget(gb_fk)
+
+    # =====================================================================
+    # загрузка данных
+    # =====================================================================
+
+    def _load_tables(self):
+        q = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema='public'
+            ORDER BY table_name;
+        """
+
+        with self.db.cursor() as cur:
+            cur.execute(q)
+            tables = [r["table_name"] for r in cur.fetchall()]
+
+        self.cb_table.addItems(tables)
+
+    def _load_columns(self):
+        table = self.cb_table.currentText()
         if not table:
             return
 
-        try:
-            # столбцы
-            cols = self.db.list_columns(table)
-            names = [c["name"] for c in cols]
+        q = """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name=%s
+            ORDER BY ordinal_position;
+        """
 
-            for combo in [self.col_list, self.del_col, self.ren_col_old,
-                          self.type_col, self.nn_col, self.unq_col,
-                          self.chk_col, self.fk_local]:
-                combo.clear()
-                combo.addItems(names)
+        with self.db.cursor() as cur:
+            cur.execute(q, (table,))
+            cols = [r["column_name"] for r in cur.fetchall()]
 
-            # таблицы для FK
-            self.fk_table.clear()
-            self.fk_table.addItems(self.db.list_tables())
-            self.update_fk_ref_columns()
+        # заполняем все combo для столбцов
+        self.cb_drop_col.clear()
+        self.cb_rename_col.clear()
+        self.cb_type_col.clear()
+        self.cb_nn_col.clear()
+        self.cb_unique_col.clear()
+        self.cb_fk_col.clear()
 
-            # UNIQUE
-            self.unq_list.clear()
-            unq = self.db.list_constraints_unique(table)
-            for u in unq:
-                if u["name"]:
-                    label = f"{u['column']} — UNIQUE ({u['name']})"
-                else:
-                    label = f"{u['column']} — UNIQUE"
-                self.unq_list.addItem(label, u["name"])
+        for cb in [
+            self.cb_drop_col, self.cb_rename_col, self.cb_type_col,
+            self.cb_nn_col, self.cb_unique_col, self.cb_fk_col
+        ]:
+            cb.addItems(cols)
 
-            # CHECK
-            self.chk_list.clear()
-            checks = self.db.list_constraints_check(table)
-            for c in checks:
-                expr = c["expression"]
-                if c["name"]:
-                    label = f"{expr} — CHECK ({c['name']})"
-                else:
-                    label = f"{expr} — CHECK"
-                self.chk_list.addItem(label, c["name"])
+        # FK — загрузка таблиц и колонок
+        self._load_fk_tables()
 
-            # FK
-            self.fk_list.clear()
-            fks = self.db.list_constraints_fk(table)
-            for fk in fks:
-                left = fk["column"]
-                right = f"{fk['ref_table']}.{fk['ref_column']}"
-                if fk["name"]:
-                    label = f"{left} → {right} ( {fk['name']} )"
-                else:
-                    label = f"{left} → {right} — FK"
-                self.fk_list.addItem(label, fk["name"])
+    def _load_fk_tables(self):
+        q = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema='public'
+            ORDER BY table_name;
+        """
 
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", str(e))
+        with self.db.cursor() as cur:
+            cur.execute(q)
+            tables = [r["table_name"] for r in cur.fetchall()]
 
-    # ==================== Дальше — Реальные действия ====================
+        self.fk_ref_table.clear()
+        self.fk_ref_table.addItems(tables)
+        self.fk_ref_table.currentTextChanged.connect(self._load_fk_columns)
 
-    def add_column(self):
-        table = self.box_table.currentText()
-        name = self.add_col_name.text().strip()
-        typ = self.add_col_type.currentText()
-        nn = self.add_col_notnull.isChecked()
+        self._load_fk_columns()
+
+    def _load_fk_columns(self):
+        table = self.fk_ref_table.currentText()
+        q = """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name=%s
+            ORDER BY ordinal_position;
+        """
+
+        with self.db.cursor() as cur:
+            cur.execute(q, (table,))
+            cols = [r["column_name"] for r in cur.fetchall()]
+
+        self.fk_ref_col.clear()
+        self.fk_ref_col.addItems(cols)
+
+    # =====================================================================
+    # загрузка пользовательских типов
+    # =====================================================================
+
+    def _load_custom_types(self):
+        """заполняем add_type и cb_new_type всеми типами PostgreSQL"""
+        # стандартные
+        base_types = [
+            "integer", "bigint", "serial", "text", "boolean",
+            "date", "timestamp", "numeric", "real"
+        ]
+
+        custom = self.db.get_custom_types()  # ENUM + COMPOSITE
+
+        for cb in (self.add_type, self.cb_new_type):
+            cb.clear()
+            cb.addItems(base_types + custom)
+
+    # =====================================================================
+    # реакция на выбор типа (показать структуру ENUM/COMPOSITE)
+    # =====================================================================
+
+    def _on_type_changed(self, typename):
+        """показывает структуру типа справа"""
+        if not typename:
+            self.type_details.setRowCount(0)
+            return
+
+        self.type_details.clear()
+        self.type_details.setRowCount(0)
+
+        # ENUM
+        if self._is_enum(typename):
+            q = """
+                SELECT enumlabel
+                FROM pg_enum 
+                JOIN pg_type ON pg_type.oid = enumtypid
+                WHERE typname=%s
+                ORDER BY enumsortorder;
+            """
+            with self.db.cursor() as cur:
+                cur.execute(q, (typename,))
+                rows = cur.fetchall()
+
+            self.type_details.setColumnCount(1)
+            self.type_details.setHorizontalHeaderLabels(["ENUM значение"])
+            self.type_details.setRowCount(len(rows))
+
+            for i, r in enumerate(rows):
+                self.type_details.setItem(i, 0, QTableWidgetItem(r["enumlabel"]))
+
+        # COMPOSITE
+        elif self._is_composite(typename):
+            q = """
+                SELECT attname, format_type(atttypid, atttypmod) AS type
+                FROM pg_attribute
+                JOIN pg_type ON pg_type.oid = attrelid
+                WHERE typname=%s AND attnum > 0
+                ORDER BY attnum;
+            """
+            with self.db.cursor() as cur:
+                cur.execute(q, (typename,))
+                rows = cur.fetchall()
+
+            self.type_details.setColumnCount(2)
+            self.type_details.setHorizontalHeaderLabels(["Поле", "Тип"])
+            self.type_details.setRowCount(len(rows))
+
+            for i, r in enumerate(rows):
+                self.type_details.setItem(i, 0, QTableWidgetItem(r["attname"]))
+                self.type_details.setItem(i, 1, QTableWidgetItem(r["type"]))
+
+        else:
+            self.type_details.setRowCount(0)
+
+    def _is_enum(self, typename):
+        q = """
+            SELECT 1
+            FROM pg_type
+            WHERE typnamespace='public'::regnamespace
+              AND typname=%s AND typtype='e';
+        """
+        with self.db.cursor() as cur:
+            cur.execute(q, (typename,))
+            return cur.fetchone() is not None
+
+    def _is_composite(self, typename):
+        q = """
+            SELECT 1
+            FROM pg_type
+            WHERE typnamespace='public'::regnamespace
+              AND typname=%s AND typtype='c';
+        """
+        with self.db.cursor() as cur:
+            cur.execute(q, (typename,))
+            return cur.fetchone() is not None
+
+    # =====================================================================
+    # ALTER TABLE операции
+    # =====================================================================
+
+    def _add_column(self):
+        table = self.cb_table.currentText()
+        name = self.add_name.text().strip()
+        typ = self.add_type.currentText()
 
         if not name:
-            QMessageBox.warning(self, "Ошибка", "Введите имя столбца.")
             return
 
-        q = f"ALTER TABLE {table} ADD COLUMN {name} {typ}"
-        if nn:
-            q += " NOT NULL"
+        sql = f"ALTER TABLE {table} ADD COLUMN {name} {typ};"
+        self._execute(sql, f"добавлен столбец {name}")
+        self._load_columns()
 
-        self.exec_alter_and_refresh(q)
+    def _drop_column(self):
+        table = self.cb_table.currentText()
+        col = self.cb_drop_col.currentText()
+        sql = f"ALTER TABLE {table} DROP COLUMN {col} CASCADE;"
+        self._execute(sql, f"столбец {col} удалён")
+        self._load_columns()
 
-    def delete_column(self):
-        table = self.box_table.currentText()
-        col = self.del_col.currentText()
-        q = f"ALTER TABLE {table} DROP COLUMN {col} CASCADE"
-        self.exec_alter_and_refresh(q)
-
-    def rename_column(self):
-        table = self.box_table.currentText()
-        old = self.ren_col_old.currentText()
-        new = self.ren_col_new.text().strip()
+    def _rename_column(self):
+        table = self.cb_table.currentText()
+        old = self.cb_rename_col.currentText()
+        new = self.rename_new.text().strip()
         if not new:
-            QMessageBox.warning(self, "Ошибка", "Введите новое имя.")
             return
-        q = f"ALTER TABLE {table} RENAME COLUMN {old} TO {new}"
-        self.exec_alter_and_refresh(q)
+        sql = f"ALTER TABLE {table} RENAME COLUMN {old} TO {new};"
+        self._execute(sql, f"столбец {old} → {new}")
+        self._load_columns()
 
-    def change_type(self):
-        table = self.box_table.currentText()
-        col = self.type_col.currentText()
-        new_type = self.type_new.currentText()
-        q = f"ALTER TABLE {table} ALTER COLUMN {col} TYPE {new_type}"
-        self.exec_alter_and_refresh(q)
+    def _change_type(self):
+        table = self.cb_table.currentText()
+        col = self.cb_type_col.currentText()
+        new = self.cb_new_type.currentText()
+        sql = f"ALTER TABLE {table} ALTER COLUMN {col} TYPE {new};"
+        self._execute(sql, f"тип столбца {col} изменён")
+        self._load_columns()
 
-    def change_notnull(self):
-        table = self.box_table.currentText()
-        col = self.nn_col.currentText()
-        if self.nn_flag.isChecked():
-            q = f"ALTER TABLE {table} ALTER COLUMN {col} SET NOT NULL"
+    def _set_not_null(self, flag):
+        table = self.cb_table.currentText()
+        col = self.cb_nn_col.currentText()
+        action = "SET" if flag else "DROP"
+        sql = f"ALTER TABLE {table} ALTER COLUMN {col} {action} NOT NULL;"
+        self._execute(sql, f"NOT NULL {action} для {col}")
+
+    def _set_unique(self, flag):
+        table = self.cb_table.currentText()
+        col = self.cb_unique_col.currentText()
+
+        if flag:
+            sql = f"ALTER TABLE {table} ADD CONSTRAINT {col}_uniq UNIQUE({col});"
         else:
-            q = f"ALTER TABLE {table} ALTER COLUMN {col} DROP NOT NULL"
-        self.exec_alter_and_refresh(q)
+            sql = f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {col}_uniq;"
 
-    # ---------------- UNIQUE ----------------
+        self._execute(sql, f"UNIQUE {'добавлен' if flag else 'убран'} для {col}")
 
-    def add_unique(self):
-        table = self.box_table.currentText()
-        col = self.unq_col.currentText()
-        q = f"ALTER TABLE {table} ADD CONSTRAINT unq_{col} UNIQUE ({col})"
-        self.exec_alter_and_refresh(q)
+    def _set_fk(self):
+        table = self.cb_table.currentText()
+        col = self.cb_fk_col.currentText()
+        ref_table = self.fk_ref_table.currentText()
+        ref_col = self.fk_ref_col.currentText()
 
-    def del_unique(self):
-        table = self.box_table.currentText()
-        cname = self.unq_list.currentData()  # None → системное имя
-        if cname is None:
-            QMessageBox.warning(self, "Ошибка", "Это ограничение создано системой, укажите имя вручную.")
-            return
-        q = f"ALTER TABLE {table} DROP CONSTRAINT {cname}"
-        self.exec_alter_and_refresh(q)
-
-    # ---------------- CHECK ----------------
-
-    def add_check(self):
-        table = self.box_table.currentText()
-        col = self.chk_col.currentText()
-        op = self.chk_op.currentText()
-        val = self.chk_val.text().strip()
-
-        if not val:
-            QMessageBox.warning(self, "Ошибка", "Введите значение.")
-            return
-
-        # строковые значения берём в кавычки
-        if not val.replace('.', '', 1).isdigit():
-            val = f"'{val}'"
-
-        q = f"ALTER TABLE {table} ADD CHECK ({col} {op} {val})"
-        self.exec_alter_and_refresh(q)
-
-    def del_check(self):
-        table = self.box_table.currentText()
-        cname = self.chk_list.currentData()
-        if cname is None:
-            QMessageBox.warning(self, "Ошибка", "Это ограничение создано системой, укажите имя вручную.")
-            return
-        q = f"ALTER TABLE {table} DROP CONSTRAINT {cname}"
-        self.exec_alter_and_refresh(q)
-
-    # ---------------- FOREIGN KEY ----------------
-
-    def update_fk_ref_columns(self):
-        table = self.fk_table.currentText()
-        if not table:
-            return
-        try:
-            cols = self.db.list_columns(table)
-            names = [c["name"] for c in cols]
-            self.fk_ref_col.clear()
-            self.fk_ref_col.addItems(names)
-        except:
-            pass
-
-    def add_fk(self):
-        table = self.box_table.currentText()
-        col = self.fk_local.currentText()
-        rt = self.fk_table.currentText()
-        rc = self.fk_ref_col.currentText()
-        ondel = self.fk_on_del.currentText()
-        onupd = self.fk_on_upd.currentText()
-
-        cname = f"fk_{table}_{col}"
-
-        q = (
+        sql = (
             f"ALTER TABLE {table} "
-            f"ADD CONSTRAINT {cname} FOREIGN KEY ({col}) "
-            f"REFERENCES {rt}({rc}) "
-            f"ON DELETE {ondel} ON UPDATE {onupd}"
+            f"ADD CONSTRAINT fk_{table}_{col} "
+            f"FOREIGN KEY ({col}) REFERENCES {ref_table}({ref_col});"
         )
 
-        self.exec_alter_and_refresh(q)
+        self._execute(sql, "FK установлен")
 
-    def del_fk(self):
-        table = self.box_table.currentText()
-        cname = self.fk_list.currentData()
-        if cname is None:
-            QMessageBox.warning(self, "Ошибка", "Это ограничение создано системой, укажите имя вручную.")
-            return
-        q = f"ALTER TABLE {table} DROP CONSTRAINT {cname}"
-        self.exec_alter_and_refresh(q)
+    def _drop_fk(self):
+        table = self.cb_table.currentText()
+        col = self.cb_fk_col.currentText()
 
-    # ---------------- Table rename ----------------
+        sql = (
+            f"ALTER TABLE {table} "
+            f"DROP CONSTRAINT IF EXISTS fk_{table}_{col} CASCADE;"
+        )
 
-    def rename_table(self):
-        table = self.box_table.currentText()
-        new = self.new_table_name.text().strip()
-        if not new:
-            QMessageBox.warning(self, "Ошибка", "Введите новое имя.")
-            return
-        q = f"ALTER TABLE {table} RENAME TO {new}"
-        self.exec_alter_and_refresh(q)
+        self._execute(sql, "FK удалён")
 
-    # ------------------------------------------------------------
-    # Helper
-    # ------------------------------------------------------------
-    def exec_alter_and_refresh(self, query):
+    # =====================================================================
+    # SQL exec
+    # =====================================================================
+
+    def _execute(self, sql, msg):
         try:
-            self.db.execute_alter(query)
-            QMessageBox.information(self, "Готово", "Изменение применено.")
-            self.refresh_all_blocks()
+            self.db.execute_ddl(sql)
+            QMessageBox.information(self, "Готово", msg)
+            app_logger.info(sql)
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))
+            app_logger.error(e)

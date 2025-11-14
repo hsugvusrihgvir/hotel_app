@@ -1,308 +1,145 @@
-# -*- coding: utf-8 -*-
+# ui_enter_data_dialog.py — UI-форма для ввода данных (динамическая, исправленный setupUi)
 
-################################################################################
-## Form generated from reading UI file 'enter_data_dialog.ui'
-##
-## Created by: Qt User Interface Compiler version 6.9.2
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
-
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QRect, QSize, Qt, QRegularExpression)
-from PySide6.QtGui import QRegularExpressionValidator
-from app.db.db import HotelDB
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDateEdit, QDateTimeEdit, QDialog,
-    QDialogButtonBox, QDoubleSpinBox, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QSpinBox, QStackedWidget, QVBoxLayout, QWidget, QMessageBox
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea,
+    QWidget, QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy
 )
+from PySide6.QtGui import QFont, QColor, QPalette
+from PySide6.QtCore import Qt
 
 
+class UIEnterDataDialog(object):
+    """модальное окно для динамического ввода данных"""
 
-COMFORT_ENUM = ["standard", "semi_lux", "lux"]
+    def setupUi(self, Dialog):
+        Dialog.setWindowTitle("Добавить запись")
+        Dialog.resize(520, 600)
+        Dialog.setModal(True)
+        self._apply_dark_theme(Dialog)
 
-class Ui_EnterDataDialog(object):
-    def setupUi(self, EnterDataDialog):
-        if not EnterDataDialog.objectName():
-            EnterDataDialog.setObjectName(u"EnterDataDialog")
-        EnterDataDialog.resize(560, 420)
-        EnterDataDialog.setStyleSheet(u"""
-/* palette */
-* { color:#e8e6e3; font-family:"Segoe UI","Inter","Roboto",Arial; font-size:14px; }
-QDialog { background:#171a1d; }
-QLabel { color:#e8e6e3; }
-QLineEdit, QDateEdit, QDateTimeEdit, QSpinBox, QDoubleSpinBox, QComboBox {
-    background:#242a30; border:1px solid #323a42; border-radius:8px; padding:6px;
-}
-QLineEdit:focus, QDateEdit:focus, QDateTimeEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
-    border-color:#6fbfa7;
-}
-QCheckBox { spacing:8px; }
-QDialogButtonBox QPushButton {
-    background:#242a30; border:1px solid #323a42; border-radius:10px; padding:8px 16px;
-}
-QDialogButtonBox QPushButton:hover { background:#2b3238; border-color:#3a444e; }
-QDialogButtonBox QPushButton:pressed { background:#23292f; }
-QPushButton#btnModeClient, QPushButton#btnModeRoom, QPushButton#btnModeStay {
-    background:#20252a; border:1px solid #323a42; border-radius:10px; padding:8px 12px;
-}
-QPushButton#btnModeClient:hover, QPushButton#btnModeRoom:hover, QPushButton#btnModeStay:hover { background:#2b3238; }
-QPushButton#btnModeClient:checked { background:#2e7d6b; border-color:#2c6f60; }
-QPushButton#btnModeRoom:checked { background:#caa55b; color:#171a1d; border-color:#9b7d3f; }
-QPushButton#btnModeStay:checked { background:#6b7dc0; border-color:#5061a6; }
-QComboBox QAbstractItemView { background: #20252a; color: #e8e6e3; }
-QCalendarWidget QTableView{ alternate-background-color: #20252a; background: #20252a;
-    selection-background-color: #1e6d5b; }
-QCalendarWidget QTableView::item:hover { background: #4b5258; }
-QCalendarWidget QAbstractItemView:disabled { color: #7b7e82; background-color: #2a2f36; }
-QMenu { background-color: #2a2f36; color: #e8e6e3; border: 1px solid #323a42; border-radius: 4px; }
-QMenu::item:selected { background-color: #2e7d6b; color: white; }
-""")
+        # основной layout
+        self.main_layout = QVBoxLayout(Dialog)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(15)
 
+        # заголовок
+        self.title = QLabel("Добавление данных")
+        self.title.setFont(QFont("Segoe UI", 16, QFont.Bold))
+        self.title.setStyleSheet("color: #e0e0e0; margin-bottom: 5px;")
+        self.main_layout.addWidget(self.title)
 
-        self.vMain = QVBoxLayout(EnterDataDialog)
-        self.vMain.setObjectName(u"vMain")
+        # блок полей со скроллом
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setStyleSheet("border: none;")
 
-        # --- Header: title + mode buttons ---
-        self.hHeader = QHBoxLayout()
-        self.lblTitle = QLabel(EnterDataDialog)
-        self.lblTitle.setObjectName(u"lblTitle")
-        self.hHeader.addWidget(self.lblTitle)
-        self.hHeader.addStretch(1)
+        self.scroll_widget = QWidget()
+        self.fields_layout = QVBoxLayout(self.scroll_widget)
+        self.fields_layout.setContentsMargins(5, 5, 5, 5)
+        self.fields_layout.setSpacing(12)
 
-        from PySide6.QtWidgets import QPushButton
-
-
-        self.vMain.addLayout(self.hHeader)
-
-        # --- Stacked pages ---
-        self.stacked = QStackedWidget(EnterDataDialog)
-        self.stacked.setObjectName(u"stacked")
-        self.vMain.addWidget(self.stacked)
-
-        # ===== Page: CLIENT =====
-        self.pgClient = QWidget()
-        self.lyClient = QFormLayout(self.pgClient)
-        self.lyClient.setObjectName(u"lyClient")
-        self.edLast = QLineEdit(self.pgClient); self.edLast.setObjectName(u"edLast")
-        self.edLast.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']{39}+$"), self.edLast))
-        self.edLast.setPlaceholderText("Не более 39 символов")
-
-        self.edFirst = QLineEdit(self.pgClient); self.edFirst.setObjectName(u"edFirst")
-        self.edFirst.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']{39}+$"), self.edFirst))
-        self.edFirst.setPlaceholderText("Не более 39 символов")
-
-        self.edPatr = QLineEdit(self.pgClient); self.edPatr.setObjectName(u"edPatr")
-        self.edPatr.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^[a-zA-Zа-яА-ЯёЁ\s\-']{39}+$"), self.edPatr))
-        self.edPatr.setPlaceholderText("Не более 39 символов")
-
-        self.edPassport = QLineEdit(self.pgClient); self.edPassport.setObjectName(u"edPassport")
-        self.edPassport.setObjectName(u"edPassport")
-        self.edPassport.setMaxLength(11)
-        self.edPassport.setPlaceholderText("Серия и Номер паспорта в формате \"#### ######\"")
-        self.edPassport.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d{4} \d{6}$"), self.edPassport))
-                                           
-        self.edComment = QLineEdit(self.pgClient); self.edComment.setObjectName(u"edComment")
-        self.edComment.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^.{0, 150}+$"), self.edComment))
-        self.edComment.setPlaceholderText("Не более 150 символов")
-        self.cbRegular = QCheckBox(self.pgClient); self.cbRegular.setObjectName(u"cbRegular")
-        self.dtRegistered = QDateTimeEdit(self.pgClient); self.dtRegistered.setObjectName(u"dtRegistered")
-        self.dtRegistered.setCalendarPopup(True)
-        self.dtRegistered.setDateTime(QDateTime.currentDateTime())
-
-        self.lyClient.addRow(self._lbl("Фамилия *"), self.edLast)
-        self.lyClient.addRow(self._lbl("Имя *"), self.edFirst)
-        self.lyClient.addRow(self._lbl("Отчество"), self.edPatr)
-        self.lyClient.addRow(self._lbl("Паспорт *"), self.edPassport)
-        self.lyClient.addRow(self._lbl("Комментарий"), self.edComment)
-        self.lyClient.addRow(self._lbl("Постоянный"), self.cbRegular)
-        self.lyClient.addRow(self._lbl("Зарегистрирован"), self.dtRegistered)
-
-        self.stacked.addWidget(self.pgClient)
-
-        # ===== Page: ROOM =====
-        self.pgRoom = QWidget()
-        self.lyRoom = QFormLayout(self.pgRoom)
-        self.lyRoom.setObjectName(u"lyRoom")
-        self.sbRoomNumber = QSpinBox(self.pgRoom); self.sbRoomNumber.setMinimum(1); self.sbRoomNumber.setMaximum(9999)
-        self.sbCapacity = QSpinBox(self.pgRoom); self.sbCapacity.setMinimum(1), self.sbCapacity.setMaximum(10)
-        self.cbComfort = QComboBox(self.pgRoom); self.cbComfort.addItems(COMFORT_ENUM)
-        self.dsPrice = QDoubleSpinBox(self.pgRoom); self.dsPrice.setDecimals(2); self.dsPrice.setMinimum(0.01); self.dsPrice.setMaximum(1_000_000.0)
-        self.edAmenities = QLineEdit(self.pgRoom)
-        self.edAmenities.setPlaceholderText("wifi, tv, conditioner")
-
-        self.lyRoom.addRow(self._lbl("Удобства (через запятую)"), self.edAmenities)
-
-        self.lyRoom.addRow(self._lbl("Номер *"), self.sbRoomNumber)
-        self.lyRoom.addRow(self._lbl("Вместимость *"), self.sbCapacity)
-        self.lyRoom.addRow(self._lbl("Комфорт *"), self.cbComfort)
-        self.lyRoom.addRow(self._lbl("Цена/сутки *"), self.dsPrice)
-
-        self.stacked.addWidget(self.pgRoom)
-
-        # ===== Page: STAY =====
-        self.pgStay = QWidget()
-        self.lyStay = QFormLayout(self.pgStay)
-        self.lyStay.setObjectName(u"lyStay")
-        self.cbClient = QComboBox(self.pgStay); self.cbClient.setObjectName(u"cbClient")
-        self.cbRoom = QComboBox(self.pgStay); self.cbRoom.setObjectName(u"cbRoom")
-        self.deIn = QDateEdit(self.pgStay); self.deIn.setCalendarPopup(True); self.deIn.setDate(QDate.currentDate())
-        self.deOut = QDateEdit(self.pgStay); self.deOut.setCalendarPopup(True); self.deOut.setDate(QDate.currentDate().addDays(1))
-        self.edNote = QLineEdit(self.pgStay); self.edNote.setObjectName(u"edNote")
-        self.edNote.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r"^.{0, 150}+$"), self.edNote))
-        self.edNote.setPlaceholderText("Не более 150 символов")
-        self.cbPaid = QCheckBox(self.pgStay); self.cbPaid.setObjectName(u"cbPaid")
-        self.cbStatus = QCheckBox(self.pgStay); self.cbStatus.setObjectName(u"cbStatus"); self.cbStatus.setChecked(True)
-
-        self.lyStay.addRow(self._lbl("Клиент *"), self.cbClient)
-        self.lyStay.addRow(self._lbl("Номер *"), self.cbRoom)
-        self.lyStay.addRow(self._lbl("Заезд *"), self.deIn)
-        self.lyStay.addRow(self._lbl("Выезд *"), self.deOut)
-        self.lyStay.addRow(self._lbl("Заметка"), self.edNote)
-        self.lyStay.addRow(self._lbl("Оплачено"), self.cbPaid)
-        self.lyStay.addRow(self._lbl("Активно"), self.cbStatus)
-
-        self.stacked.addWidget(self.pgStay)
-
-        # --- Buttons ---
-        self.buttons = QDialogButtonBox(EnterDataDialog)
-        self.buttons.setObjectName(u"buttons")
-        self.buttons.setOrientation(Qt.Horizontal)
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.vMain.addWidget(self.buttons)
-
-        self.retranslateUi(EnterDataDialog)
-        self.stacked.setCurrentIndex(0)
-        QMetaObject.connectSlotsByName(EnterDataDialog)
-
-    def _lbl(self, text):
-        l = QLabel(text)
-        l.setObjectName("formLabel")
-        return l
-
-    def retranslateUi(self, EnterDataDialog):
-        EnterDataDialog.setWindowTitle(QCoreApplication.translate("EnterDataDialog", u"Ввод данных", None))
-        self.lblTitle.setText(QCoreApplication.translate("EnterDataDialog", u"Режим: Клиент", None))
-        self.cbRegular.setText(QCoreApplication.translate("EnterDataDialog", u"Постоянный клиент", None))
-        self.cbPaid.setText(QCoreApplication.translate("EnterDataDialog", u"Оплачено", None))
-        self.cbStatus.setText(QCoreApplication.translate("EnterDataDialog", u"Активно", None))
-        self.dtRegistered.setDisplayFormat(QCoreApplication.translate("EnterDataDialog", u"dd.MM.yyyy HH:mm", None))
-# end of Ui_EnterDataDialog
-
-
-class EnterDataDialog(QDialog): # режимы для разных таблиц
-    MODE_CLIENT = 0
-    MODE_ROOM = 1
-    MODE_STAY = 2
-
-    def __init__(self, parent=None, clients=None, rooms=None, db=None):
-        super().__init__(parent)
-
-        self.mode = self.MODE_CLIENT
-        self.ui = Ui_EnterDataDialog()
-        self.ui.setupUi(self)
-        self.db = db
-
-
-        clients = clients or []
-        rooms = rooms or []
-        for c in clients:
-            # ожидается dict{id, label}
-            self.ui.cbClient.addItem(c["label"], c["id"])
-        for r in rooms:
-            self.ui.cbRoom.addItem(r["label"], r["id"])
+        self.scroll_area.setWidget(self.scroll_widget)
+        self.main_layout.addWidget(self.scroll_area)
 
         # кнопки
-        self.ui.buttons.accepted.connect(self._on_ok)
-        self.ui.buttons.rejected.connect(self.reject)
+        self.btn_box = QHBoxLayout()
+        self.btn_box.setSpacing(15)
 
+        self.btn_save = self._button("Сохранить")
+        self.btn_cancel = self._button("Отмена")
 
-        self.setMode(self.MODE_CLIENT)
+        self.btn_box.addWidget(self.btn_save)
+        self.btn_box.addWidget(self.btn_cancel)
 
-    def setMode(self, mode:int):
-        self.mode = mode
-        self.ui.stacked.setCurrentIndex(mode)
-        title = ["Режим: Клиент", "Режим: Номер", "Режим: Размещение"][mode]
-        self.ui.lblTitle.setText(title)
+        self.main_layout.addLayout(self.btn_box)
 
-    def _on_ok(self):
-        # валидации и сбор данных под каждый режим
-        try:
-            self.payload = self.collect()
-        except ValueError as e:
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Ошибка", str(e))
-            return
-        self.accept()
+        # селектор таблицы (необязателен в UI, но используется в коде)
+        self.table_selector = QComboBox()
+        self.table_selector.setStyleSheet(self._combo_style())
+        self.main_layout.insertWidget(1, self.table_selector)
 
-    def rightRegister(self, name):
-        if not name:
-            return ""
-        name = name.lower()
-        " ".join(name.split())
-        hyphen_parts = []
-        for part in name.split('-'):
-            space_parts = [p.capitalize() for p in part.split()]
-            hyphen_parts.append(' '.join(space_parts))
+    # =============================
+    # вспомогательные методы UI
+    # =============================
 
-        return '-'.join(hyphen_parts)
+    def _apply_dark_theme(self, widget):
+        """тёмная палитра"""
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(20, 22, 25))
+        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
+        palette.setColor(QPalette.Base, QColor(30, 32, 36))
+        palette.setColor(QPalette.Text, QColor(230, 230, 230))
+        palette.setColor(QPalette.Button, QColor(45, 47, 52))
+        palette.setColor(QPalette.ButtonText, QColor(240, 240, 240))
+        widget.setPalette(palette)
+        widget.setStyleSheet("background-color: #141618;")
 
-    def collect(self) -> dict:
-        if self.mode == self.MODE_CLIENT:
-            last = self.rightRegister(name=self.ui.edLast.text().strip())
-            first = self.rightRegister(name=self.ui.edFirst.text().strip())
-            passport = self.ui.edPassport.text().strip()
-            if not last or not first or len(passport) != 11:
-                raise ValueError("Фамилия и Имя обязательны. Паспорт о формату через пробел.")
-            return dict(
-                last_name=last,
-                first_name=first,
-                patronymic=self.rightRegister(name=self.ui.edPatr.text().strip()) or None,
-                passport=passport,
-                comment=self.ui.edComment.text().strip() or None,
-                is_regular=self.ui.cbRegular.isChecked(),
-                registered=self.ui.dtRegistered.dateTime().toPython()
-            )
+    def _field_frame(self):
+        """контейнер для одного поля"""
+        frame = QFrame()
+        frame.setFrameShape(QFrame.StyledPanel)
+        frame.setStyleSheet("""
+            QFrame {
+                background-color: #1d1f22;
+                border: 1px solid #333;
+                border-radius: 6px;
+            }
+        """)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(6)
+        return frame
 
-        if self.mode == self.MODE_ROOM:
-            rn = int(self.ui.sbRoomNumber.value())
-            cap = int(self.ui.sbCapacity.value())
-            price = float(self.ui.dsPrice.value())
-            comfort = self.ui.cbComfort.currentText()
-            amenities_text = self.ui.edAmenities.text().strip()
-            amenities = [a.strip() for a in amenities_text.split(",") if a.strip()] if amenities_text else []
-            if rn < 1 or cap < 1 or price <= 0:
-                raise ValueError("Номер >= 1, вместимость >= 1, цена > 0.")
-            if self.db.room_exists(room_number=rn):
-                raise ValueError("Этот номер уже есть в базе.")
-            return dict(
-                room_number=rn,
-                capacity=cap,
-                comfort=comfort,
-                price=price,
-                amenities=amenities
-            )
+    def _label(self, text):
+        lbl = QLabel(text)
+        lbl.setStyleSheet("color: #c8c8c8; font-size: 14px;")
+        return lbl
 
-        if self.mode == self.MODE_STAY:
-            if self.ui.cbClient.currentIndex() < 0 or self.ui.cbRoom.currentIndex() < 0:
-                raise ValueError("Выберите клиента и номер.")
-            ci = self.ui.deIn.date().toPython()
-            co = self.ui.deOut.date().toPython()
-            if co <= ci:
-                raise ValueError("Дата выезда должна быть позже даты заезда.")
-            return dict(
-                client_id=self.ui.cbClient.currentData(),
-                room_id=self.ui.cbRoom.currentData(),
-                check_in=ci, check_out=co,
-                is_paid=self.ui.cbPaid.isChecked(),
-                note=self.ui.edNote.text().strip() or None,
-                status=self.ui.cbStatus.isChecked()
-            )
+    def _edit_style(self):
+        return """
+            QLineEdit {
+                background-color: #2b2d31;
+                color: #e8e8e8;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 6px;
+            }
+            QLineEdit:focus {
+                border-color: #6b8cff;
+            }
+        """
 
-        raise ValueError("Неизвестный режим")
+    def _combo_style(self):
+        return """
+            QComboBox {
+                background-color: #2b2d31;
+                color: #e0e0e0;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QComboBox:hover {
+                border-color: #666;
+            }
+        """
+
+    def _button(self, text):
+        btn = QPushButton(text)
+        btn.setMinimumHeight(40)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2e3136;
+                color: #e0e0e0;
+                border: 1px solid #444;
+                border-radius: 6px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #393c42;
+            }
+            QPushButton:pressed {
+                background-color: #24272c;
+            }
+        """)
+        return btn

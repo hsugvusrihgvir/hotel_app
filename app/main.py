@@ -1,13 +1,29 @@
 import sys
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from app.main_window import MainWindow
+from app.db.db import Database
+from app.log.log import app_logger
+
 
 def main():
     app = QApplication(sys.argv)
-    w = MainWindow() # создание меню
-    w.setWindowTitle("Гостиница")
+
+    db = Database()  # загрузит .env
+
+    try:
+        db.connect()
+    except Exception as e:
+        QMessageBox.critical(None, "Ошибка подключения", str(e))
+        return
+
+    w = MainWindow(db)
     w.show()
-    sys.exit(app.exec())
+
+    code = app.exec()
+
+    db.close()
+    sys.exit(code)
+
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,6 @@
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
 
 DO $$
 BEGIN
@@ -39,3 +42,22 @@ CREATE TABLE IF NOT EXISTS stays (
   status BOOLEAN NOT NULL DEFAULT true,
   CONSTRAINT ck_dates CHECK (check_out > check_in)
 );
+
+-- Клиенты
+INSERT INTO clients (last_name, first_name, patronymic, passport, comment, is_regular)
+VALUES
+  ('Иванов', 'Алексей', 'Петрович', '12345678901', 'VIP клиент', true),
+  ('Смирнова', 'Елена', NULL, '98765432100', 'Просит этаж пониже', false);
+
+-- Комнаты
+INSERT INTO rooms (room_number, capacity, comfort, price, amenities)
+VALUES
+  (101, 2, 'standard', 3000.00, ARRAY['Wi-Fi', 'Телевизор']),
+  (202, 3, 'lux', 8500.00, ARRAY['Wi-Fi', 'Мини-бар', 'Кондиционер']),
+  (303, 1, 'semi_lux', 5200.00, ARRAY['Wi-Fi']);
+
+-- Проживания
+INSERT INTO stays (client_id, room_id, check_in, check_out, is_paid, note)
+VALUES
+  (1, 1, CURRENT_DATE - INTERVAL '2 days', CURRENT_DATE + INTERVAL '3 days', true, 'Оплата по безналу'),
+  (2, 2, CURRENT_DATE, CURRENT_DATE + INTERVAL '1 week', false, 'Ожидается предоплата');
