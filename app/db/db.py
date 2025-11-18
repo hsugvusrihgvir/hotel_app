@@ -9,6 +9,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 
 
+
 class Database:
     """слой PostgreSQL + автоматическая загрузка .env"""
 
@@ -62,7 +63,8 @@ class Database:
                 data_type,
                 is_nullable,
                 column_default,
-                udt_name
+                udt_name,
+                character_maximum_length
             FROM information_schema.columns
             WHERE table_name = %s
             ORDER BY ordinal_position;
@@ -138,6 +140,11 @@ class Database:
             self.conn.commit()
         finally:
             cur.close()
+
+    def commit(self):
+        """ручной коммит (дополнительно к автокоммиту в cursor())."""
+        if getattr(self, "conn", None) is not None:
+            self.conn.commit()
     # ---------------------------
     # DDL (CREATE / ALTER / DROP)
     # ---------------------------
@@ -356,23 +363,47 @@ class Database:
         self.execute_ddl(q.as_string(self.conn))
 
     def get_foreign_keys(self, table):
-        sql = """
-        SELECT
-            kcu.column_name AS column,
-            ccu.table_name AS ref_table,
-            ccu.column_name AS ref_column
-        FROM
-            information_schema.table_constraints AS tc
-            JOIN information_schema.key_column_usage AS kcu
-                ON tc.constraint_name = kcu.constraint_name
-            JOIN information_schema.constraint_column_usage AS ccu
-                ON ccu.constraint_name = tc.constraint_name
-        WHERE tc.constraint_type = 'FOREIGN KEY'
-          AND tc.table_name = %s;
+        q = """
+            SELECT
+                kcu.column_name AS column,
+                ccu.table_name AS ref_table,
+                ccu.column_name AS ref_column
+            FROM
+                information_schema.table_constraints AS tc
+                JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu
+                    ON ccu.constraint_name = tc.constraint_name
+            WHERE
+                tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_name = %s;
         """
-        return self.execute(sql, (table,), fetchall=True)
+
+        with self.cursor() as cur:
+            cur.execute(q, (table,))
+            return cur.fetchall()
 
     def get_reference_values(self, table):
-        """получить пары (id, строка-представление)"""
-        sql = f"SELECT id, first_name || ' ' || last_name FROM {table} LIMIT 100"
-        return self.execute(sql, fetchall=True)
+        """получить пары (id, строка-представление) для выпадающих списков FK."""
+        # подбираем человекочитаемое представление в зависимости от таблицы
+        if table == "clients":
+            label_expr = "last_name || ' ' || first_name"
+        elif table == "rooms":
+            label_expr = "room_number::text || ' (' || comfort::text || ')'"
+        else:
+            # на всякий случай дефолт — просто id::text
+            label_expr = "id::text"
+
+        query = sql.SQL(
+            "SELECT id, {label} AS label FROM {tbl} ORDER BY id LIMIT 100"
+        ).format(
+            label=sql.SQL(label_expr),
+            tbl=sql.Identifier(table),
+        )
+
+        with self.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+
+        # cursor использует RealDictCursor → возвращаем список (id, label)
+        return [(row["id"], row["label"]) for row in rows]

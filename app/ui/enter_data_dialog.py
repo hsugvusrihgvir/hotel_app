@@ -7,9 +7,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QWidget
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIntValidator, QDoubleValidator
 
 from app.ui.ui_enter_data_dialog import UIEnterDataDialog
 from app.log.log import app_logger
+
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator
+from PySide6.QtCore import QRegularExpression
 
 
 class EnterDataDialog(QDialog):
@@ -57,7 +61,7 @@ class EnterDataDialog(QDialog):
     # ----------------------------------------------------------------------
 
     def _load_fields(self):
-        """строим UI по структуре выбранной таблицы"""
+        """строим UI по структуре выбранной таблицы + ограничения ввода"""
         table = self.ui.table_selector.currentText()
         if not table:
             return
@@ -65,42 +69,51 @@ class EnterDataDialog(QDialog):
         # очищаем старые поля
         ly = self.ui.fields_layout
         while ly.count():
-            w = ly.takeAt(0)
-            if w.widget():
-                w.widget().deleteLater()
+            item = ly.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
 
         self.fields.clear()
         self.col_info.clear()
 
         try:
             cols = self.db.get_table_columns(table)
-            fkeys = self.db.get_foreign_keys(table)  # ← Добавь такой метод в класс DB
+            fkeys = self.db.get_foreign_keys(table)
         except Exception as e:
             app_logger.error(e)
             QMessageBox.critical(self, "Ошибка", f"Не удалось получить структуру таблицы:\n{e}")
             return
 
-        fk_dict = {fk['column']: fk for fk in fkeys}
+        fk_dict = {fk["column"]: fk for fk in fkeys}
 
         for col in cols:
             name = col["column_name"]
-            dtype = col["data_type"]
+            dtype = col["data_type"]  # 'character varying', 'integer', ...
             nullable = col["is_nullable"] == "YES"
             enum_values = col.get("enum_values")
             default = col.get("column_default")
+            max_len = col.get("character_maximum_length")  # может быть None
 
             self.col_info[name] = {
                 "type": dtype,
                 "nullable": nullable,
                 "default": default,
-                "enum_values": enum_values
+                "enum_values": enum_values,
+                "max_length": max_len,
             }
 
             lbl = QLabel(f"{name} ({dtype})")
-            lbl.setStyleSheet("color:#dcdcdc; margin-top:8px;")
+            if not nullable:
+                lbl.setStyleSheet("color:#ffaaaa; margin-top:8px;")
+            else:
+                lbl.setStyleSheet("color:#dcdcdc; margin-top:8px;")
             ly.addWidget(lbl)
 
-            # ENUM
+            field = None
+            dtype_lower = (dtype or "").lower()
+
+            # ---------- ENUM ----------
             if enum_values:
                 field = QComboBox()
                 field.addItems(enum_values)
@@ -109,9 +122,9 @@ class EnterDataDialog(QDialog):
                 self.fields[name] = field
                 continue
 
-            # Внешний ключ
+            # ---------- Внешний ключ ----------
             if name in fk_dict:
-                ref_table = fk_dict[name]['ref_table']
+                ref_table = fk_dict[name]["ref_table"]
                 try:
                     options = self.db.get_reference_values(ref_table)
                     field = QComboBox()
@@ -124,8 +137,17 @@ class EnterDataDialog(QDialog):
                 except Exception as e:
                     app_logger.error(f"Ошибка загрузки значений из {ref_table}: {e}")
 
-            # Массив
-            if dtype.endswith("[]"):
+            # ---------- Boolean ----------
+            if dtype_lower == "boolean":
+                field = QComboBox()
+                field.addItems(["true", "false"])
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:4px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+                continue
+
+            # ---------- Массивы ----------
+            if dtype_lower.endswith("[]"):
                 field = QLineEdit()
                 field.setPlaceholderText("Введите значения через запятую")
                 field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
@@ -133,13 +155,82 @@ class EnterDataDialog(QDialog):
                 self.fields[name] = field
                 continue
 
-            # Обычный ввод
-            field = QLineEdit()
-            field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-            if default:
+            # ---------- ЦЕЛЫЕ ЧИСЛА ----------
+            if dtype_lower in ("integer", "int4", "bigint", "smallint"):
+                field = QLineEdit()
+                field.setValidator(QIntValidator(field))
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+                continue
+
+            # ---------- ВЕЩЕСТВЕННЫЕ ЧИСЛА ----------
+            if dtype_lower in ("numeric", "real", "double precision"):
+                field = QLineEdit()
+                dv = QDoubleValidator(field)
+                dv.setNotation(QDoubleValidator.StandardNotation)
+                field.setValidator(dv)
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+                continue
+
+            if dtype_lower == "date" or dtype_lower.startswith("timestamp"):
+                field = QLineEdit()
+
+                if dtype_lower == "date":
+                    # пример для пользователя: 2025-11-15
+                    field.setPlaceholderText("например: 2025-11-15 (ГГГГ-ММ-ДД)")
+                    regex = QRegularExpression(r"\d{4}-\d{2}-\d{2}")
+                else:
+                    # timestamp without time zone / with time zone
+                    field.setPlaceholderText(
+                        "например: 2025-11-15 14:30 или 2025-11-15 14:30:00"
+                    )
+                    regex = QRegularExpression(
+                        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?"
+                    )
+
+                field.setValidator(QRegularExpressionValidator(regex, field))
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+                continue
+
+            # ---------- СТРОКИ: varchar / text / char ----------
+            if dtype_lower in ("character varying", "varchar", "text", "character"):
+                field = QLineEdit()
+
+                # лимит длины для varchar/char
+                if max_len is not None:
+                    field.setMaxLength(max_len)
+
+                # только буквы для ФИО
+                if name in ("last_name", "first_name", "patronymic"):
+                    regex = QRegularExpression(r"[A-Za-zА-Яа-яЁё\s\- ]+")
+                    field.setValidator(QRegularExpressionValidator(regex, field))
+
+                # паспорт строго в формате 4 цифры + пробел + 6 цифр
+                if name == "passport":
+                    regex = QRegularExpression(r"\d{4} \d{6}")
+                    field.setValidator(QRegularExpressionValidator(regex, field))
+                    # для паспорта всегда жёстко 11 символов: 4 + пробел + 6
+                    field.setMaxLength(11)
+
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+
+            else:
+                # ---------- всё остальное — обычное поле ----------
+                field = QLineEdit()
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+
+            # placeholder для DEFAULT
+            if default is not None:
                 field.setPlaceholderText(f"По умолчанию: {default}")
-            ly.addWidget(field)
-            self.fields[name] = field
 
     # ----------------------------------------------------------------------
     # save
@@ -167,66 +258,91 @@ class EnterDataDialog(QDialog):
     # ----------------------------------------------------------------------
 
     def _collect_data(self):
-        """сбор значений из всех полей с валидацией NOT NULL и массивов"""
+        """Сбор значений из полей с учётом типов, NULL, DEFAULT и т.д."""
         result = {}
 
         for name, widget in self.fields.items():
             info = self.col_info[name]
             dtype = info["type"]
             nullable = info["nullable"]
-            enum_vals = info["enum_values"]
+            default = info["default"]
+            enum_values = info["enum_values"]
 
-            # ENUM
-            if enum_vals:
-                val = widget.currentText()
-                result[name] = val
-                continue
+            # забираем текст из QLineEdit / QComboBox
+            if isinstance(widget, QLineEdit):
+                text = widget.text().strip()
+            elif isinstance(widget, QComboBox):
+                text = widget.currentText().strip()
+            else:
+                text = ""
 
-            text = widget.text().strip()
+            # userData нужно для внешних ключей (там лежит сам id)
+            current_data = None
+            if isinstance(widget, QComboBox):
+                current_data = widget.currentData()
 
-            # NULL?
+            # ---------- пустое значение ----------
             if text == "":
-                if not nullable:
-                    raise ValueError(f"Поле '{name}' обязательно (NOT NULL)")
-                result[name] = None
+                # если есть DEFAULT → вообще не включаем поле в INSERT
+                if default is not None:
+                    continue
+
+                # NULL допустим
+                if nullable:
+                    result[name] = None
+                    continue
+
+                # NOT NULL и нет default → ошибка
+                raise ValueError(f"Поле '{name}' обязательно (NOT NULL)")
+
+            dtype_lower = (dtype or "").lower()
+
+            # ---------- ENUM ----------
+            if enum_values:
+                if text not in enum_values:
+                    raise ValueError(f"Недопустимое значение ENUM для '{name}'")
+                result[name] = text
                 continue
 
-            # массив
-            if dtype.endswith("[]"):
+            # ---------- массивы ----------
+            if dtype_lower.endswith("[]"):
                 arr = [x.strip() for x in text.split(",") if x.strip()]
                 result[name] = arr
                 continue
 
-            # numeric → float
-            if dtype in ("numeric", "double precision", "real"):
+            # ---------- целые числа ----------
+            if dtype_lower in ("integer", "int4", "bigint", "smallint"):
+                # для FK в комбобоксе в userData лежит id
+                value = current_data if current_data is not None else text
                 try:
-                    result[name] = float(text)
-                except:
-                    raise ValueError(f"Поле '{name}' должно быть числом")
-
-                continue
-
-            # integer
-            if dtype in ("integer", "int4", "smallint", "bigint"):
-                try:
-                    result[name] = int(text)
-                except:
+                    result[name] = int(value)
+                except Exception:
                     raise ValueError(f"Поле '{name}' должно быть целым числом")
                 continue
 
-            # boolean
-            if dtype == "boolean":
-                if text.lower() in ("true", "t", "1", "yes", "y"):
+            # ---------- числа с плавающей запятой ----------
+            if dtype_lower in ("numeric", "real", "double precision"):
+                value = current_data if current_data is not None else text
+                try:
+                    result[name] = float(str(value).replace(",", "."))
+                except Exception:
+                    raise ValueError(f"Поле '{name}' должно быть числом")
+                continue
+
+            # ---------- boolean ----------
+            if dtype_lower == "boolean":
+                low = text.lower()
+                if low in ("true", "t", "1", "yes", "y", "да"):
                     result[name] = True
-                elif text.lower() in ("false", "f", "0", "no", "n"):
+                elif low in ("false", "f", "0", "no", "n", "нет"):
                     result[name] = False
                 else:
                     raise ValueError(
-                        f"Поле '{name}' (boolean) принимает значения: true/false"
+                        f"Поле '{name}' (boolean) принимает значения true/false"
                     )
                 continue
 
-            # всё остальное — строка
+            # ---------- строки и остальное ----------
             result[name] = text
 
         return result

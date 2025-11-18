@@ -9,6 +9,7 @@ from app.ui.data_window import DataWindow
 from app.ui.alter_table_window import AlterTableWindow
 from app.ui.types_window import TypesWindow  # на будущее, если понадобится кнопка
 from app.log.log import app_logger
+from app.ui.quick_view_window import QuickViewWindow
 from PySide6.QtWidgets import QDialog
 
 
@@ -32,6 +33,7 @@ class MainWindow(QMainWindow):
         self.ui.btn_show_data.clicked.connect(self.on_show_data)
         self.ui.btn_alter.clicked.connect(self.on_alter)
         self.ui.btn_reset_schema.clicked.connect(self.on_reset_schema)
+        self.ui.btn_quick_view.clicked.connect(self.on_quick_view)
 
     # ---------------------------------------------------
     # обработчики
@@ -120,3 +122,10 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             self._error(f"Ошибка при сбросе базы:\n{e}")
+
+    def on_quick_view(self):
+        try:
+            wnd = QuickViewWindow(self.db, self)
+            wnd.show()
+        except Exception as e:
+            self._error(f"Ошибка быстрого просмотра:\n{e}")

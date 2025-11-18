@@ -30,24 +30,26 @@ class UIMainWindow(object):
         main_layout.addWidget(header)
 
         # -------- блок 1: операции со схемой --------
-        schema_frame = self._block("Работа со схемой")
+        schema_frame = self._block("Работа со схемой", kind="primary")
         self.btn_create_schema = self._button("Создать схему и таблицы")
         schema_frame.layout().addWidget(self.btn_create_schema)
         main_layout.addWidget(schema_frame)
 
-        self.btn_reset_schema = self._button("Сбросить базу")
+        self.btn_reset_schema = self._button_danger("Сбросить базу")
         schema_frame.layout().addWidget(self.btn_reset_schema)
 
         # -------- блок 2: операции с данными --------
-        data_frame = self._block("Работа с данными")
+        data_frame = self._block("Работа с данными", kind="success")
         self.btn_add_data = self._button("Внести данные")
+        self.btn_quick_view = self._button("Быстрый просмотр")
+        data_frame.layout().addWidget(self.btn_quick_view)
         self.btn_show_data = self._button("Показать данные")
         data_frame.layout().addWidget(self.btn_add_data)
         data_frame.layout().addWidget(self.btn_show_data)
         main_layout.addWidget(data_frame)
 
         # -------- блок 3: ALTER TABLE --------
-        alter_frame = self._block("ALTER TABLE")
+        alter_frame = self._block("ALTER TABLE", kind="warning")
         self.btn_alter = self._button("Изменить структуру")
         alter_frame.layout().addWidget(self.btn_alter)
         main_layout.addWidget(alter_frame)
@@ -57,6 +59,18 @@ class UIMainWindow(object):
         footer.setAlignment(Qt.AlignCenter)
         footer.setStyleSheet("color: #777; font-size: 12px; margin-top: 20px;")
         main_layout.addWidget(footer)
+
+        schema_frame.layout().setAlignment(Qt.AlignCenter)
+        data_frame.layout().setAlignment(Qt.AlignCenter)
+        alter_frame.layout().setAlignment(Qt.AlignCenter)
+
+        # И сами кнопки
+        self.btn_create_schema.setMaximumWidth(260)
+        self.btn_reset_schema.setMaximumWidth(260)
+        self.btn_add_data.setMaximumWidth(260)
+        self.btn_quick_view.setMaximumWidth(260)
+        self.btn_show_data.setMaximumWidth(260)
+        self.btn_alter.setMaximumWidth(260)
 
     # =======================
     # helpers
@@ -76,44 +90,100 @@ class UIMainWindow(object):
         MainWindow.setPalette(palette)
         MainWindow.setStyleSheet("background-color: #141618;")
 
-    def _block(self, title: str) -> QFrame:
+    def _block(self, title: str, kind: str = "default") -> QFrame:
+        """Цветной блок с заголовком (пастельные цвета)."""
+
         frame = QFrame()
         frame.setFrameShape(QFrame.StyledPanel)
-        frame.setStyleSheet("""
-            QFrame {
-                background-color: #1d1f22;
-                border: 1px solid #333;
-                border-radius: 8px;
-            }
-        """)
+
+        # мягкие оттенки
+        if kind == "primary":
+            accent = "#8BA4E0"  # мягкий голубой
+        elif kind == "success":
+            accent = "#7AC29A"  # мягкий мятный
+        elif kind == "warning":
+            accent = "#E6B980"  # персиково-бежевый
+        else:
+            accent = "#4C566A"  # спокойный серо-синий
+
+        frame.setStyleSheet(f"""
+               QFrame {{
+                   background-color: #191b22;        /* фон блока */
+                   border: 1px solid #262933;
+                   border-radius: 10px;
+                   border-left: 4px solid {accent};  /* цветная лента слева */
+               }}
+           """)
+
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
         lbl = QLabel(title)
         lbl.setFont(QFont("Segoe UI", 14, QFont.Bold))
-        lbl.setStyleSheet("color: #d0d0d0;")
+        lbl.setStyleSheet(f"color: {accent};")  # заголовок в том же мягком цвете
         layout.addWidget(lbl)
+
         return frame
 
     def _button(self, text: str) -> QPushButton:
         btn = QPushButton(text)
         btn.setMinimumHeight(42)
-        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        btn.setStyleSheet("""
+               QPushButton {
+                   background-color: #3F4F79;   /* приглушённый синий */
+                   color: #F5F5F7;
+                   border: 1px solid #323A52;
+                   border-radius: 8px;
+                   padding: 6px 14px;
+                   font-size: 15px;
+                   font-weight: 500;
+               }
+               QPushButton:hover {
+                   background-color: #364568;   /* чуть темнее при hover */
+                   border-color: #2B3550;
+               }
+               QPushButton:pressed {
+                   background-color: #2B3452;
+                   border-color: #222A40;
+               }
+               QPushButton:disabled {
+                   background-color: #252937;
+                   color: #9CA3AF;
+                   border-color: #3A4257;
+               }
+           """)
+        return btn
+
+
+    def _button_danger(self, text: str) -> QPushButton:
+        """Кнопка для опасных действий (сброс базы и т.п.) в мягком красном."""
+        btn = QPushButton(text)
+        btn.setMinimumHeight(42)
+        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         btn.setStyleSheet("""
             QPushButton {
-                background-color: #2b2d31;
-                color: #e0e0e0;
-                border: 1px solid #444;
-                border-radius: 6px;
+                background-color: #B96B6B;   /* мягкий кирпичный */
+                color: #FFF5F5;
+                border: 1px solid #9A5555;
+                border-radius: 8px;
+                padding: 6px 14px;
                 font-size: 15px;
+                font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #35373c;
-                border-color: #666;
+                background-color: #A95B5B;
+                border-color: #874545;
             }
             QPushButton:pressed {
-                background-color: #232528;
+                background-color: #8A4545;
+                border-color: #6B3434;
+            }
+            QPushButton:disabled {
+                background-color: #4B3A3A;
+                color: #E5E7EB;
+                border-color: #6B4A4A;
             }
         """)
         return btn

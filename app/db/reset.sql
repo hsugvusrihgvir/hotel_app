@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS stays (
   CONSTRAINT ck_dates CHECK (check_out > check_in)
 );
 
--- Клиенты
+-- Базовые клиенты
 INSERT INTO clients (last_name, first_name, patronymic, passport, comment, is_regular)
 VALUES
-  ('Иванов', 'Алексей', 'Петрович', '12345678901', 'VIP клиент', true),
-  ('Смирнова', 'Елена', NULL, '98765432100', 'Просит этаж пониже', false);
+  ('Иванов', 'Алексей', 'Петрович', '1234 567890', 'VIP клиент', true),
+  ('Смирнова', 'Елена', NULL, '9876 543210', 'Просит этаж пониже', false);
 
 -- Комнаты
 INSERT INTO rooms (room_number, capacity, comfort, price, amenities)
@@ -59,5 +59,5 @@ VALUES
 -- Проживания
 INSERT INTO stays (client_id, room_id, check_in, check_out, is_paid, note)
 VALUES
-  (1, 1, CURRENT_DATE - INTERVAL '2 days', CURRENT_DATE + INTERVAL '3 days', true, 'Оплата по безналу'),
-  (2, 2, CURRENT_DATE, CURRENT_DATE + INTERVAL '1 week', false, 'Ожидается предоплата');
+  (1, 1, (CURRENT_DATE - INTERVAL '2 days')::date, (CURRENT_DATE + INTERVAL '3 days')::date, true, 'Оплата по безналу'),
+  (2, 2, CURRENT_DATE, (CURRENT_DATE + INTERVAL '1 week')::date, false, 'Ожидается предоплата');
