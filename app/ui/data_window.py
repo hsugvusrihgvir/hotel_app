@@ -3,7 +3,7 @@ from typing import Optional, Set, Dict
 from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
-    QListWidget, QListWidgetItem, QFrame, QScrollArea
+    QListWidget, QListWidgetItem, QFrame, QScrollArea, QHeaderView  # ← добавь QHeaderView
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -414,6 +414,9 @@ class DataWindow(QMainWindow):
         order_section = CollapsibleSection("ORDER BY", order_widget)
         left_layout.addWidget(order_section)
 
+        # --- НОВАЯ СЕКЦИЯ: CASE / Работа с NULL ---
+        self._build_case_null_section(left_layout)
+
         # Обновить
         self.btn_refresh = QPushButton("Обновить данные")
         self.btn_refresh.clicked.connect(self._load_data)
@@ -426,18 +429,42 @@ class DataWindow(QMainWindow):
         # ---------- правый блок: панель строковых операций ----------
         self._build_string_panel(split)
 
-        # ---------- низ: таблица ----------
+        # ---------- низ: таблица + поиск по результату ----------
         main_layout.addWidget(top_container)
+
+        # строка поиска по уже полученной таблице
+        search_row = QHBoxLayout()
+        search_row.addWidget(QLabel("Поиск по результату:"))
+
+        self.result_search_column = QComboBox()
+        search_row.addWidget(self.result_search_column)
+
+        self.result_search_edit = QLineEdit()
+        self.result_search_edit.setPlaceholderText("Введите текст для фильтрации")
+        search_row.addWidget(self.result_search_edit)
+
+        # фильтрация при вводе и смене колонки
+        self.result_search_edit.textChanged.connect(self._apply_result_filter)
+        self.result_search_column.currentIndexChanged.connect(self._apply_result_filter)
+
+        main_layout.addLayout(search_row)
 
         self.table = QTableWidget()
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
         main_layout.addWidget(self.table)
 
+        header = self.table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(QHeaderView.Stretch)
+
+
+
         # служебная инфа
         self._load_all_column_lists()
         self._load_column_types()
         self._apply_columns_to_builders()
+        self._apply_columns_to_case_null()  # <-- ДОБАВЬ ЭТО
         self._load_subquery_tables()
         self._load_string_op_columns()
 
@@ -458,6 +485,56 @@ class DataWindow(QMainWindow):
                 padding: 4px;
             }
         """)
+
+    def _update_result_search_columns(self):
+        """Обновляет список колонок для фильтрации по результату."""
+        if not hasattr(self, "result_search_column"):
+            return
+
+        self.result_search_column.blockSignals(True)
+        self.result_search_column.clear()
+
+        headers = []
+        for c in range(self.table.columnCount()):
+            item = self.table.horizontalHeaderItem(c)
+            if item:
+                headers.append(item.text())
+
+        if headers:
+            self.result_search_column.addItems(headers)
+
+        self.result_search_column.blockSignals(False)
+
+    def _apply_result_filter(self):
+        """Фильтр по подстроке внутри выбранной колонки (кейс-инсенситив)."""
+        if not hasattr(self, "result_search_edit") or self.table.rowCount() == 0:
+            return
+
+        text = self.result_search_edit.text().strip().lower()
+        col_name = self.result_search_column.currentText() if hasattr(self, "result_search_column") else ""
+
+        # если строка пустая — показываем всё
+        if not text or not col_name:
+            for r in range(self.table.rowCount()):
+                self.table.setRowHidden(r, False)
+            return
+
+        # ищем индекс выбранной колонки
+        col_idx = -1
+        for c in range(self.table.columnCount()):
+            item = self.table.horizontalHeaderItem(c)
+            if item and item.text() == col_name:
+                col_idx = c
+                break
+
+        if col_idx == -1:
+            return
+
+        # прячем строки, где нет подстроки
+        for r in range(self.table.rowCount()):
+            item = self.table.item(r, col_idx)
+            value = item.text().lower() if item else ""
+            self.table.setRowHidden(r, text not in value)
 
     # ---------------------------------------------------------
     # Панель строковых операций (справа)
@@ -617,6 +694,133 @@ class DataWindow(QMainWindow):
 
         parent_layout.addWidget(panel, 2)
 
+
+
+    def _build_case_null_section(self, parent_layout: QVBoxLayout):
+        """Секция 'CASE / Работа с NULL' в левой панели."""
+
+        from PySide6.QtWidgets import QGridLayout  # локально, чтобы не плодить импорт сверху
+
+        wrapper = QWidget()
+        grid = QGridLayout(wrapper)
+        grid.setContentsMargins(4, 4, 4, 4)
+        grid.setHorizontalSpacing(6)
+        grid.setVerticalSpacing(4)
+
+        row = 0
+
+        # ---------- CASE ----------
+        title_case = QLabel("CASE — вычисляемый столбец")
+        title_case.setStyleSheet("color:#9CA3AF; font-size:11px;")
+        grid.addWidget(title_case, row, 0, 1, 4)
+        row += 1
+
+        grid.addWidget(QLabel("Колонка:"), row, 0)
+        self.case_col = QComboBox()
+        grid.addWidget(self.case_col, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Оператор:"), row, 0)
+        self.case_op = QComboBox()
+        self.case_op.addItems(["=", "<>", ">", "<", ">=", "<=", "BETWEEN"])
+        grid.addWidget(self.case_op, row, 1)
+
+        grid.addWidget(QLabel("Значение 1:"), row, 2)
+        self.case_value1 = QLineEdit()
+        grid.addWidget(self.case_value1, row, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Значение 2 (для BETWEEN):"), row, 0, 1, 2)
+        self.case_value2 = QLineEdit()
+        grid.addWidget(self.case_value2, row, 2, 1, 2)
+        row += 1
+
+        grid.addWidget(QLabel("THEN:"), row, 0)
+        self.case_then = QLineEdit()
+        grid.addWidget(self.case_then, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("ELSE (опционально):"), row, 0)
+        self.case_else = QLineEdit()
+        grid.addWidget(self.case_else, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Alias:"), row, 0)
+        self.case_alias = QLineEdit()
+        self.case_alias.setPlaceholderText("например: price_case")
+        grid.addWidget(self.case_alias, row, 1, 1, 2)
+        self.btn_apply_case = QPushButton("Применить CASE")
+        self.btn_apply_case.clicked.connect(self._load_data)
+        grid.addWidget(self.btn_apply_case, row, 3)
+        row += 1
+
+        # ---------- COALESCE ----------
+        sep1 = QFrame()
+        sep1.setFrameShape(QFrame.HLine)
+        sep1.setFrameShadow(QFrame.Sunken)
+        grid.addWidget(sep1, row, 0, 1, 4)
+        row += 1
+
+        title_coa = QLabel("COALESCE — заменить NULL значением")
+        title_coa.setStyleSheet("color:#9CA3AF; font-size:11px;")
+        grid.addWidget(title_coa, row, 0, 1, 4)
+        row += 1
+
+        grid.addWidget(QLabel("Колонка:"), row, 0)
+        self.coalesce_col = QComboBox()
+        grid.addWidget(self.coalesce_col, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Если NULL, то:"), row, 0)
+        self.coalesce_value = QLineEdit()
+        self.coalesce_value.setPlaceholderText("подставляемое значение")
+        grid.addWidget(self.coalesce_value, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Alias:"), row, 0)
+        self.coalesce_alias = QLineEdit()
+        self.coalesce_alias.setPlaceholderText("например: comment_filled")
+        grid.addWidget(self.coalesce_alias, row, 1, 1, 2)
+        self.btn_apply_coalesce = QPushButton("Применить COALESCE")
+        self.btn_apply_coalesce.clicked.connect(self._load_data)
+        grid.addWidget(self.btn_apply_coalesce, row, 3)
+        row += 1
+
+        # ---------- NULLIF ----------
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.HLine)
+        sep2.setFrameShadow(QFrame.Sunken)
+        grid.addWidget(sep2, row, 0, 1, 4)
+        row += 1
+
+        title_nullif = QLabel("NULLIF — NULL, если значения равны")
+        title_nullif.setStyleSheet("color:#9CA3AF; font-size:11px;")
+        grid.addWidget(title_nullif, row, 0, 1, 4)
+        row += 1
+
+        grid.addWidget(QLabel("Колонка:"), row, 0)
+        self.nullif_col = QComboBox()
+        grid.addWidget(self.nullif_col, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Сравнить с:"), row, 0)
+        self.nullif_value = QLineEdit()
+        self.nullif_value.setPlaceholderText("значение, при котором вернуть NULL")
+        grid.addWidget(self.nullif_value, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Alias:"), row, 0)
+        self.nullif_alias = QLineEdit()
+        self.nullif_alias.setPlaceholderText("например: paid_or_null")
+        grid.addWidget(self.nullif_alias, row, 1, 1, 2)
+        self.btn_apply_nullif = QPushButton("Применить NULLIF")
+        self.btn_apply_nullif.clicked.connect(self._load_data)
+        grid.addWidget(self.btn_apply_nullif, row, 3)
+        row += 1
+
+        section = CollapsibleSection("CASE / Работа с NULL", wrapper)
+        parent_layout.addWidget(section)
+
     def _on_string_op_changed(self):
         """Обновляем подсказки и видимость полей под выбранную операцию."""
         op = (self.str_op.currentText() or "").upper()
@@ -686,6 +890,22 @@ class DataWindow(QMainWindow):
         self.order_col.addItems(all_cols)
         self.group_col.addItems([""] + all_cols)
         self.aggregate_target.addItems([""] + all_cols)
+
+    def _apply_columns_to_case_null(self):
+        """Проставляем список колонок в комбобоксы CASE / COALESCE / NULLIF."""
+        all_cols = list(self.join_info.get("selected_columns", []))
+
+        if not all_cols:
+            return
+
+        for cb in (
+                getattr(self, "case_col", None),
+                getattr(self, "coalesce_col", None),
+                getattr(self, "nullif_col", None),
+        ):
+            if cb is not None:
+                cb.clear()
+                cb.addItems(all_cols)
 
     def _load_column_types(self):
         self.col_types.clear()
@@ -874,6 +1094,115 @@ class DataWindow(QMainWindow):
         # возвращаем уже с alias
         return f"{expr_core} AS {alias}"
 
+    def _build_case_null_exprs(self) -> list[str]:
+        """
+        Строит вычисляемые столбцы:
+        - CASE ... END AS alias
+        - COALESCE(col, value) AS alias
+        - NULLIF(col, value) AS alias
+        Возвращает список строк вида 'expr AS alias'.
+        """
+        exprs: list[str] = []
+
+        def register_alias(alias: str, core_expr: str):
+            """Регистрируем новый виртуальный столбец, чтобы по нему можно было сортировать и дальше его использовать."""
+            self.string_virtual_expr[alias] = core_expr
+            self.string_virtual_columns.add(alias)
+            if self.order_col.findText(alias) == -1:
+                self.order_col.addItem(alias)
+            self.current_string_alias = alias
+
+        # ---------- CASE ----------
+        if hasattr(self, "case_col"):
+            col = (self.case_col.currentText() or "").strip()
+            op = (self.case_op.currentText() or "").strip()
+            alias = (self.case_alias.text() or "").strip()
+            v1 = (self.case_value1.text() or "").strip()
+            v2 = (self.case_value2.text() or "").strip()
+            then_raw = (self.case_then.text() or "").strip()
+            else_raw = (self.case_else.text() or "").strip()
+
+            if col and op and v1 and then_raw:
+                # alias по умолчанию, если пользователь не ввёл
+                if not alias:
+                    base = col.split(".")[-1] or "col"
+                    alias = f"{base}_case"
+
+                try:
+                    dt = self.col_types.get(col, "text").lower()
+
+                    if op == "BETWEEN":
+                        if not v2:
+                            QMessageBox.warning(self, "CASE", "Для BETWEEN укажите два значения.")
+                        else:
+                            lit1 = self.where_builder._format_literal(v1, dt, op)
+                            lit2 = self.where_builder._format_literal(v2, dt, op)
+                            cond = f"{col} BETWEEN {lit1} AND {lit2}"
+                    else:
+                        lit = self.where_builder._format_literal(v1, dt, op)
+                        cond = f"{col} {op} {lit}"
+
+                    then_esc = then_raw.replace("'", "''")
+                    if else_raw:
+                        else_esc = else_raw.replace("'", "''")
+                        core = (
+                            f"CASE WHEN {cond} "
+                            f"THEN '{then_esc}' "
+                            f"ELSE '{else_esc}' END"
+                        )
+                    else:
+                        core = f"CASE WHEN {cond} THEN '{then_esc}' END"
+
+                    exprs.append(f"{core} AS {alias}")
+                    register_alias(alias, core)
+
+                except Exception as e:
+                    QMessageBox.warning(self, "CASE", f"Не удалось построить CASE:\n{e}")
+
+        # ---------- COALESCE ----------
+        if hasattr(self, "coalesce_col"):
+            col = (self.coalesce_col.currentText() or "").strip()
+            alias = (self.coalesce_alias.text() or "").strip()
+            raw = (self.coalesce_value.text() or "").strip()
+
+            if col and raw:
+                # alias по умолчанию
+                if not alias:
+                    base = col.split(".")[-1] or "col"
+                    alias = f"{base}_coalesce"
+
+                try:
+                    dt = self.col_types.get(col, "text").lower()
+                    lit = self.where_builder._format_literal(raw, dt, "=")
+                    core = f"COALESCE({col}, {lit})"
+                    exprs.append(f"{core} AS {alias}")
+                    register_alias(alias, core)
+                except Exception as e:
+                    QMessageBox.warning(self, "COALESCE", f"Не удалось построить COALESCE:\n{e}")
+
+        # ---------- NULLIF ----------
+        if hasattr(self, "nullif_col"):
+            col = (self.nullif_col.currentText() or "").strip()
+            alias = (self.nullif_alias.text() or "").strip()
+            raw = (self.nullif_value.text() or "").strip()
+
+            if col and raw:
+                # alias по умолчанию
+                if not alias:
+                    base = col.split(".")[-1] or "col"
+                    alias = f"{base}_nullif"
+
+                try:
+                    dt = self.col_types.get(col, "text").lower()
+                    lit = self.where_builder._format_literal(raw, dt, "=")
+                    core = f"NULLIF({col}, {lit})"
+                    exprs.append(f"{core} AS {alias}")
+                    register_alias(alias, core)
+                except Exception as e:
+                    QMessageBox.warning(self, "NULLIF", f"Не удалось построить NULLIF:\n{e}")
+
+        return exprs
+
     # ---------------------------------------------------------
     # SQL builder
     # ---------------------------------------------------------
@@ -893,13 +1222,27 @@ class DataWindow(QMainWindow):
         else:
             cols = ", ".join(all_cols) if all_cols else "*"
 
-        # строковая операция (если есть) — добавляем как вычисленный столбец
+        aggregate_mode = bool(
+            self.aggregate_func.currentText() and self.aggregate_target.currentText()
+        )
+
+        # вычисляемые столбцы (строковые операции + CASE/NULL)
+        extra_exprs: list[str] = []
+
         str_expr = self._build_string_expr()
-        if str_expr and not (self.aggregate_func.currentText() and self.aggregate_target.currentText()):
-            cols = f"{cols}, {str_expr}" if cols.strip() else str_expr
+        if str_expr and not aggregate_mode:
+            extra_exprs.append(str_expr)
+
+        case_null_exprs = self._build_case_null_exprs()
+        if case_null_exprs and not aggregate_mode:
+            extra_exprs.extend(case_null_exprs)
+
+        if extra_exprs:
+            extra_sql = ", ".join(extra_exprs)
+            cols = f"{cols}, {extra_sql}" if cols.strip() else extra_sql
 
         # агрегат (если указан) перекрывает обычный SELECT
-        if self.aggregate_func.currentText() and self.aggregate_target.currentText():
+        if aggregate_mode:
             func = self.aggregate_func.currentText()
             target = self.aggregate_target.currentText()
             cols = f"{func}({target}) AS agg_value"
@@ -1046,9 +1389,13 @@ class DataWindow(QMainWindow):
                 for c, col in enumerate(cols):
                     self.table.setItem(r, c, QTableWidgetItem(str(row[col])))
 
-            # подсветка нового столбца и обновление правой панели
+                # подсветка нового столбца и обновление правой панели
             self._highlight_string_column()
             self._load_string_op_columns()
+
+            # обновляем список колонок для поиска и применяем текущий фильтр
+            self._update_result_search_columns()
+            self._apply_result_filter()
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка выполнения запроса:\n{e}")

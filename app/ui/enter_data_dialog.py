@@ -4,9 +4,9 @@
 
 from PySide6.QtWidgets import (
     QDialog, QMessageBox, QLabel, QLineEdit, QComboBox,
-    QVBoxLayout, QHBoxLayout, QWidget
+    QVBoxLayout, QHBoxLayout, QWidget, QDateEdit, QDateTimeEdit
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRegularExpression, QDate, QDateTime
 from PySide6.QtGui import QIntValidator, QDoubleValidator
 
 from app.ui.ui_enter_data_dialog import UIEnterDataDialog
@@ -14,6 +14,7 @@ from app.log.log import app_logger
 
 from PySide6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator
 from PySide6.QtCore import QRegularExpression
+
 
 
 class EnterDataDialog(QDialog):
@@ -89,6 +90,11 @@ class EnterDataDialog(QDialog):
 
         for col in cols:
             name = col["column_name"]
+
+            # SERIAL id — не вводим руками, БД сама
+            if name == "id":
+                continue
+
             dtype = col["data_type"]  # 'character varying', 'integer', ...
             nullable = col["is_nullable"] == "YES"
             enum_values = col.get("enum_values")
@@ -175,23 +181,26 @@ class EnterDataDialog(QDialog):
                 self.fields[name] = field
                 continue
 
-            if dtype_lower == "date" or dtype_lower.startswith("timestamp"):
-                field = QLineEdit()
+            # ---------- DATE: календарь + ручной ввод с проверкой ----------
+            if dtype_lower == "date":
+                field = QDateEdit()
+                field.setCalendarPopup(True)
+                field.setDisplayFormat("yyyy-MM-dd")
+                field.setDate(QDate.currentDate())
+                # можно и руками, и через календарь
+                field.setToolTip("Выберите дату в календаре или измените вручную (ГГГГ-ММ-ДД)")
+                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
+                ly.addWidget(field)
+                self.fields[name] = field
+                continue
 
-                if dtype_lower == "date":
-                    # пример для пользователя: 2025-11-15
-                    field.setPlaceholderText("например: 2025-11-15 (ГГГГ-ММ-ДД)")
-                    regex = QRegularExpression(r"\d{4}-\d{2}-\d{2}")
-                else:
-                    # timestamp without time zone / with time zone
-                    field.setPlaceholderText(
-                        "например: 2025-11-15 14:30 или 2025-11-15 14:30:00"
-                    )
-                    regex = QRegularExpression(
-                        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?"
-                    )
-
-                field.setValidator(QRegularExpressionValidator(regex, field))
+            # ---------- TIMESTAMP: календарь + время ----------
+            if dtype_lower.startswith("timestamp"):
+                field = QDateTimeEdit()
+                field.setCalendarPopup(True)
+                field.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+                field.setDateTime(QDateTime.currentDateTime())
+                field.setToolTip("Выберите дату и время в календаре или измените вручную")
                 field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
                 ly.addWidget(field)
                 self.fields[name] = field
@@ -268,11 +277,17 @@ class EnterDataDialog(QDialog):
             default = info["default"]
             enum_values = info["enum_values"]
 
-            # забираем текст из QLineEdit / QComboBox
+            # забираем текст из виджетов
             if isinstance(widget, QLineEdit):
                 text = widget.text().strip()
             elif isinstance(widget, QComboBox):
                 text = widget.currentText().strip()
+            elif isinstance(widget, QDateEdit):
+                # DATE
+                text = widget.date().toString("yyyy-MM-dd")
+            elif isinstance(widget, QDateTimeEdit):
+                # TIMESTAMP
+                text = widget.dateTime().toString("yyyy-MM-dd HH:mm:ss")
             else:
                 text = ""
 

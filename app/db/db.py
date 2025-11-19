@@ -407,3 +407,150 @@ class Database:
 
         # cursor использует RealDictCursor → возвращаем список (id, label)
         return [(row["id"], row["label"]) for row in rows]
+
+    def get_user_types(self):
+        """
+        Список пользовательских типов (ENUM и настоящих COMPOSITE, а не таблиц).
+        Возвращает список dict: {"name", "kind", "schema}.
+        kind: 'e' — ENUM, 'c' — составной тип.
+        """
+        q = """
+               SELECT
+                   t.typname,
+                   t.typtype,
+                   n.nspname,
+                   c.relkind
+               FROM pg_type t
+               JOIN pg_namespace n ON n.oid = t.typnamespace
+               LEFT JOIN pg_class c ON c.oid = t.typrelid
+               WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                 AND (
+                       t.typtype = 'e'                      -- ENUM
+                    OR (t.typtype = 'c' AND c.relkind = 'c') -- только настоящие COMPOSITE
+                 )
+               ORDER BY n.nspname, t.typname;
+           """
+        with self.cursor() as cur:
+            cur.execute(q)
+            rows = cur.fetchall()
+
+        return [
+            {"name": r["typname"], "kind": r["typtype"], "schema": r["nspname"]}
+            for r in rows
+        ]
+
+    def get_enum_labels(self, type_name: str):
+        """Все значения ENUM-типа (список строк)."""
+        # используем уже существующую внутреннюю функцию
+        return self._get_enum_values(type_name)
+
+    def get_composite_fields(self, type_name: str):
+        """
+        Поля составного типа.
+        Возвращает список dict: {"name": имя_поля, "type": текстовое_описание_типа}.
+        """
+        q = """
+            SELECT
+                att.attname AS name,
+                pg_catalog.format_type(att.atttypid, att.atttypmod) AS data_type
+            FROM pg_type t
+            JOIN pg_class c ON c.oid = t.typrelid
+            JOIN pg_attribute att ON att.attrelid = c.oid
+            WHERE t.typname = %s
+              AND att.attnum > 0
+              AND NOT att.attisdropped
+            ORDER BY att.attnum;
+        """
+        with self.cursor() as cur:
+            cur.execute(q, (type_name,))
+            rows = cur.fetchall()
+
+        return [{"name": r["name"], "type": r["data_type"]} for r in rows]
+
+    def create_enum_type(self, name: str, labels: list[str]):
+        """CREATE TYPE <name> AS ENUM (...)."""
+        labels = [v.strip() for v in labels if v and v.strip()]
+        if not labels:
+            raise ValueError("ENUM должен содержать хотя бы одно значение")
+
+        query = sql.SQL("CREATE TYPE {} AS ENUM ({})").format(
+            sql.Identifier(name),
+            sql.SQL(", ").join(sql.Literal(v) for v in labels),
+        )
+        with self.cursor() as cur:
+            cur.execute(query)
+
+        app_logger.info(f"Создан ENUM-тип {name} со значениями {labels}")
+
+    def add_enum_value(self, type_name: str, value: str):
+        """ALTER TYPE <type_name> ADD VALUE <value>."""
+        value = value.strip()
+        if not value:
+            return
+
+        query = sql.SQL("ALTER TYPE {} ADD VALUE %s").format(
+            sql.Identifier(type_name)
+        )
+        with self.cursor() as cur:
+            cur.execute(query, (value,))
+
+        app_logger.info(f"В ENUM-тип {type_name} добавлено значение {value!r}")
+
+    def create_composite_type(self, name: str, fields: list[tuple[str, str]]):
+        """
+        CREATE TYPE <name> AS (field1 type1, field2 type2, ...).
+
+        fields — список кортежей (имя_поля, тип_данных).
+        Тип данных передаётся текстом, например: "integer", "text", "comfort_enum".
+        """
+        cleaned_fields = []
+        for fname, ftype in fields:
+            fname = (fname or "").strip()
+            ftype = (ftype or "").strip()
+            if not fname or not ftype:
+                continue
+            cleaned_fields.append((fname, ftype))
+
+        if not cleaned_fields:
+            raise ValueError("Составной тип должен содержать хотя бы одно поле")
+
+        parts = []
+        for fname, ftype in cleaned_fields:
+            parts.append(
+                sql.SQL("{} {}").format(
+                    sql.Identifier(fname),
+                    sql.SQL(ftype)
+                )
+            )
+
+        query = sql.SQL("CREATE TYPE {} AS ({})").format(
+            sql.Identifier(name),
+            sql.SQL(", ").join(parts),
+        )
+
+        with self.cursor() as cur:
+            cur.execute(query)
+
+        app_logger.info(
+            f"Создан составной тип {name} с полями "
+            + ", ".join(f"{f[0]} {f[1]}" for f in cleaned_fields)
+        )
+
+    def drop_type(self, type_name: str, cascade: bool = False):
+        """
+        DROP TYPE <type_name> [CASCADE | RESTRICT].
+
+        В учебном приложении обычно безопаснее использовать CASCADE,
+        чтобы не ловить ошибки из-за зависимых объектов.
+        """
+        query = sql.SQL("DROP TYPE {} {}").format(
+            sql.Identifier(type_name),
+            sql.SQL("CASCADE") if cascade else sql.SQL("RESTRICT"),
+        )
+        with self.cursor() as cur:
+            cur.execute(query)
+
+        app_logger.info(
+            f"Удалён тип {type_name} с опцией "
+            f"{'CASCADE' if cascade else 'RESTRICT'}"
+        )

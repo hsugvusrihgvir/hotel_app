@@ -21,6 +21,8 @@ class MainWindow(QMainWindow):
         self.ui = UIMainWindow()
         self.ui.setup_ui(self)
 
+        self._types_window = None  # ← добавь эту строку
+
         self._connect_signals()
 
     # ---------------------------------------------------
@@ -34,6 +36,8 @@ class MainWindow(QMainWindow):
         self.ui.btn_alter.clicked.connect(self.on_alter)
         self.ui.btn_reset_schema.clicked.connect(self.on_reset_schema)
         self.ui.btn_quick_view.clicked.connect(self.on_quick_view)
+        # отдельный модуль пользовательских типов
+        self.ui.btn_types.clicked.connect(self.on_manage_types)
 
     # ---------------------------------------------------
     # обработчики
@@ -51,6 +55,12 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             self._error(f"Ошибка создания схемы:\n{e}")
+
+        if self._types_window is not None:
+            try:
+                self._types_window.reload_types()
+            except Exception as e:
+                app_logger.error(f"Не удалось обновить окно типов после создания схемы: {e}")
 
     def on_add_data(self):
         """модальное окно для вставки данных"""
@@ -123,9 +133,28 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self._error(f"Ошибка при сбросе базы:\n{e}")
 
+
+        if self._types_window is not None:
+            try:
+                self._types_window.reload_types()
+            except Exception as e:
+                app_logger.error(f"Не удалось обновить окно типов после сброса: {e}")
+
+
     def on_quick_view(self):
         try:
             wnd = QuickViewWindow(self.db, self)
             wnd.show()
         except Exception as e:
             self._error(f"Ошибка быстрого просмотра:\n{e}")
+
+    def on_manage_types(self):
+        """Открыть отдельное окно управления пользовательскими типами."""
+        try:
+            if self._types_window is None:
+                self._types_window = TypesWindow(self.db, self)
+            self._types_window.show()
+            self._types_window.raise_()
+            self._types_window.activateWindow()
+        except Exception as e:
+            self._error(f"Ошибка при открытии окна типов:\n{e}")

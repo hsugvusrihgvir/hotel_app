@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QMessageBox, QSpinBox
+    QTableWidget, QTableWidgetItem, QMessageBox, QSpinBox, QHeaderView  # ← добавь
 )
 from PySide6.QtCore import Qt
 from app.log.log import app_logger
@@ -20,6 +20,27 @@ class QuickViewWindow(QMainWindow):
         self._build_ui()
         self._apply_theme()
         self._load_tables()
+
+    def _get_column_type(self, table, column):
+        """Возвращает data_type из information_schema для выбранной колонки."""
+        if not table or not column:
+            return None
+
+        q = """
+              SELECT data_type
+              FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = %s
+                AND column_name = %s
+          """
+        try:
+            with self.db.cursor() as cur:
+                cur.execute(q, (table, column))
+                row = cur.fetchone()
+                return row["data_type"] if row else None
+        except Exception as e:
+            app_logger.error(e)
+            return None
 
     # ---------------- UI ----------------
     def _build_ui(self):
@@ -44,9 +65,9 @@ class QuickViewWindow(QMainWindow):
         self.cb_column = QComboBox()
         top.addWidget(self.cb_column)
 
-        # поле фильтра
+        # поле поиска
         self.filter_edit = QLineEdit()
-        self.filter_edit.setPlaceholderText("Фильтр (LIKE)")
+        self.filter_edit.setPlaceholderText("Поиск…")
         top.addWidget(self.filter_edit)
 
         # order by
@@ -70,11 +91,23 @@ class QuickViewWindow(QMainWindow):
         top.addWidget(self.btn_apply)
 
         self.btn_apply.clicked.connect(self._load_data)
-        self.cb_table.currentTextChanged.connect(self._load_columns)
+        self.cb_table.currentTextChanged.connect(self._on_table_changed)
 
         # таблица
+        # таблица
         self.table = QTableWidget()
+        self.table.verticalHeader().setVisible(False)
+
+        header = self.table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(QHeaderView.Stretch)
+
         layout.addWidget(self.table)
+
+    def _on_table_changed(self):
+        """При смене таблицы сразу обновляем список колонок и данные."""
+        self._load_columns()
+        self._load_data()
 
     def _apply_theme(self):
         """Пастельная тема для окна быстрого просмотра."""
@@ -183,10 +216,34 @@ class QuickViewWindow(QMainWindow):
         q = f"SELECT * FROM {table}"
         params = []
 
-        # простой фильтр LIKE c параметром
+        # поиск по типу колонки
         if flt:
-            q += f" WHERE {col}::text ILIKE %s"
-            params.append(f"%{flt}%")
+            col_type = self._get_column_type(table, col)
+            numeric_types = {
+                "integer", "bigint", "smallint",
+                "numeric", "real", "double precision"
+            }
+
+            if col_type in numeric_types and flt.isdigit():
+                # нормальный поиск по id/числам: WHERE col = 123
+                q += f" WHERE {col} = %s"
+                params.append(int(flt))
+            elif col_type == "boolean":
+                # true / false / да / нет
+                txt = flt.lower()
+                if txt in ("true", "t", "1", "yes", "y", "да"):
+                    q += f" WHERE {col} = %s"
+                    params.append(True)
+                elif txt in ("false", "f", "0", "no", "n", "нет"):
+                    q += f" WHERE {col} = %s"
+                    params.append(False)
+                else:
+                    q += f" WHERE {col}::text ILIKE %s"
+                    params.append(f"%{flt}%")
+            else:
+                # строки, даты и всё остальное — мягкий поиск по подстроке
+                q += f" WHERE {col}::text ILIKE %s"
+                params.append(f"%{flt}%")
 
         # ORDER BY (имена колонок/направление берутся из combobox, не из ввода)
         if order_col:

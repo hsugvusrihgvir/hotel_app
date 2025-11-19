@@ -270,6 +270,20 @@ class AlterTableWindow(QDialog):
             "TEXT",
         ])
 
+        # добавим в список пользовательские типы (ENUM / COMPOSITE),
+        # чтобы их было удобно выбирать при ALTER COLUMN TYPE
+        try:
+            user_types = self.db.get_user_types()
+        except Exception as e:
+            app_logger.error(f"Не удалось получить пользовательские типы в ALTER: {e}")
+            user_types = []
+
+        if user_types:
+            self.cb_new_type.insertSeparator(self.cb_new_type.count())
+            for t in user_types:
+                # показываем только имя типа; пользователь понимает, что это ENUM / COMPOSITE
+                self.cb_new_type.addItem(t["name"])
+
         self.btn_type = QPushButton("Изменить тип")
         style_button(self.btn_type)
         self.btn_type.clicked.connect(self._change_type)

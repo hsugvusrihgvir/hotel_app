@@ -33,10 +33,15 @@ class UIMainWindow(object):
         schema_frame = self._block("Работа со схемой", kind="primary")
         self.btn_create_schema = self._button("Создать схему и таблицы")
         schema_frame.layout().addWidget(self.btn_create_schema)
-        main_layout.addWidget(schema_frame)
 
         self.btn_reset_schema = self._button_danger("Сбросить базу")
         schema_frame.layout().addWidget(self.btn_reset_schema)
+
+        # новая кнопка для отдельного модуля пользовательских типов
+        self.btn_types = self._button("Пользовательские типы")
+        schema_frame.layout().addWidget(self.btn_types)
+
+        main_layout.addWidget(schema_frame)
 
         # -------- блок 2: операции с данными --------
         data_frame = self._block("Работа с данными", kind="success")
