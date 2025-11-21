@@ -1,7 +1,7 @@
 # ui_main_window.py — правильный UI-класс для QMainWindow
 from PySide6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QFrame, QSizePolicy, QWidget
+    QVBoxLayout, QHBoxLayout, QGridLayout,
+    QPushButton, QLabel, QFrame, QSizePolicy, QWidget
 )
 from PySide6.QtGui import QFont, QColor, QPalette
 from PySide6.QtCore import Qt
@@ -31,26 +31,50 @@ class UIMainWindow(object):
 
         # -------- блок 1: операции со схемой --------
         schema_frame = self._block("Работа со схемой", kind="primary")
+        schema_layout = schema_frame.layout()
+
+        schema_grid = QGridLayout()
+        schema_grid.setHorizontalSpacing(12)
+        schema_grid.setVerticalSpacing(8)
+        schema_layout.addLayout(schema_grid)
+
         self.btn_create_schema = self._button("Создать схему и таблицы")
-        schema_frame.layout().addWidget(self.btn_create_schema)
-
         self.btn_reset_schema = self._button_danger("Сбросить базу")
-        schema_frame.layout().addWidget(self.btn_reset_schema)
-
-        # новая кнопка для отдельного модуля пользовательских типов
         self.btn_types = self._button("Пользовательские типы")
-        schema_frame.layout().addWidget(self.btn_types)
+        self.btn_views = self._button("Представления и CTE")
+        self.btn_cte_builder = self._button("Создать CTE (подзапрос)")
+
+        # раскладка по сетке 2×3
+        # 1 ряд
+        schema_grid.addWidget(self.btn_create_schema, 0, 0)
+        schema_grid.addWidget(self.btn_reset_schema, 0, 1)
+        # 2 ряд
+        schema_grid.addWidget(self.btn_types, 1, 0)
+        schema_grid.addWidget(self.btn_views, 1, 1)
+        # 3 ряд — кнопка на всю ширину
+        schema_grid.addWidget(self.btn_cte_builder, 2, 0, 1, 2)
 
         main_layout.addWidget(schema_frame)
 
         # -------- блок 2: операции с данными --------
         data_frame = self._block("Работа с данными", kind="success")
-        self.btn_add_data = self._button("Внести данные")
+        data_layout = data_frame.layout()
+
+        data_grid = QGridLayout()
+        data_grid.setHorizontalSpacing(12)
+        data_grid.setVerticalSpacing(8)
+        data_layout.addLayout(data_grid)
+
         self.btn_quick_view = self._button("Быстрый просмотр")
-        data_frame.layout().addWidget(self.btn_quick_view)
+        self.btn_add_data = self._button("Внести данные")
         self.btn_show_data = self._button("Показать данные")
-        data_frame.layout().addWidget(self.btn_add_data)
-        data_frame.layout().addWidget(self.btn_show_data)
+
+        # 1 ряд
+        data_grid.addWidget(self.btn_quick_view, 0, 0)
+        data_grid.addWidget(self.btn_add_data, 0, 1)
+        # 2 ряд — на всю ширину
+        data_grid.addWidget(self.btn_show_data, 1, 0, 1, 2)
+
         main_layout.addWidget(data_frame)
 
         # -------- блок 3: ALTER TABLE --------
@@ -72,10 +96,15 @@ class UIMainWindow(object):
         # И сами кнопки
         self.btn_create_schema.setMaximumWidth(260)
         self.btn_reset_schema.setMaximumWidth(260)
-        self.btn_add_data.setMaximumWidth(260)
+        self.btn_types.setMaximumWidth(260)
+        self.btn_views.setMaximumWidth(260)
+        self.btn_cte_builder.setMaximumWidth(260)
+
         self.btn_quick_view.setMaximumWidth(260)
+        self.btn_add_data.setMaximumWidth(260)
         self.btn_show_data.setMaximumWidth(260)
         self.btn_alter.setMaximumWidth(260)
+
 
     # =======================
     # helpers

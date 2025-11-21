@@ -7,9 +7,11 @@ from app.ui.enter_data_dialog import EnterDataDialog
 from app.ui.join_master_dialog import JoinMasterDialog
 from app.ui.data_window import DataWindow
 from app.ui.alter_table_window import AlterTableWindow
-from app.ui.types_window import TypesWindow  # на будущее, если понадобится кнопка
+from app.ui.types_window import TypesWindow
 from app.log.log import app_logger
 from app.ui.quick_view_window import QuickViewWindow
+from app.ui.cte_builder_window import CteBuilderWindow
+from app.ui.views_window import ViewsWindow
 from PySide6.QtWidgets import QDialog
 
 
@@ -38,8 +40,10 @@ class MainWindow(QMainWindow):
         self.ui.btn_quick_view.clicked.connect(self.on_quick_view)
         # отдельный модуль пользовательских типов
         self.ui.btn_types.clicked.connect(self.on_manage_types)
+        self.ui.btn_views.clicked.connect(self.on_views)# менеджер представлений
+        self.ui.btn_cte_builder.clicked.connect(self.on_cte_builder)
 
-    # ---------------------------------------------------
+        # ---------------------------------------------------
     # обработчики
     # ---------------------------------------------------
 
@@ -101,6 +105,22 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self._error(f"Ошибка ALTER TABLE:\n{e}")
 
+    def on_views(self):
+        """Открыть менеджер представлений и CTE."""
+        try:
+            wnd = ViewsWindow(self.db, self)
+            wnd.show()
+        except Exception as e:
+            self._error(f"Ошибка при открытии модуля представлений:\n{e}")
+
+    def on_cte_builder(self):
+        """Открыть конструктор CTE напрямую из главного меню."""
+        try:
+            wnd = CteBuilderWindow(self.db, self)
+            wnd.show()
+        except Exception as e:
+            self._error(f"Ошибка при открытии конструктора CTE:\n{e}")
+
     # ---------------------------------------------------
     # внутренние функции
     # ---------------------------------------------------
@@ -158,3 +178,11 @@ class MainWindow(QMainWindow):
             self._types_window.activateWindow()
         except Exception as e:
             self._error(f"Ошибка при открытии окна типов:\n{e}")
+
+    def on_cte_builder(self):
+        """Открыть конструктор CTE (WITH-запросов)."""
+        try:
+            wnd = CteBuilderWindow(self.db, self)
+            wnd.show()
+        except Exception as e:
+            self._error(f"Ошибка открытия конструктора CTE:\n{e}")

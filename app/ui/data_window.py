@@ -3,7 +3,8 @@ from typing import Optional, Set, Dict
 from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
-    QListWidget, QListWidgetItem, QFrame, QScrollArea, QHeaderView  # ← добавь QHeaderView
+    QListWidget, QListWidgetItem, QFrame, QScrollArea, QHeaderView,
+    QTabWidget,  # ← добавь вот это
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -25,10 +26,26 @@ class WhereBuilderWidget(QWidget):
     - несколько условий, объединённых AND
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, db, join_info, parent=None):
         super().__init__(parent)
-        self.columns: list[str] = []
+        self.db = db
+        self.join_info = join_info
+
+        self.setWindowTitle("Расширенный SELECT")
+        self.resize(1350, 780)
+
+        # 'table.col' -> data_type
         self.col_types: dict[str, str] = {}
+        # alias последней строковой операции
+        self.current_string_alias: Optional[str] = None
+        # текстовые вычисленные колонки (названия)
+        self.string_virtual_columns: Set[str] = set()
+        # alias -> SQL-выражение (без "AS alias")
+        self.string_virtual_expr: Dict[str, str] = {}
+
+        # базовый список колонок, по которым можно сортировать в обычном режиме
+        self._base_order_cols: list[str] = []
+
         self._build_ui()
 
     def _build_ui(self):
@@ -287,10 +304,34 @@ class DataWindow(QMainWindow):
         scroll.setWidgetResizable(True)
         left_widget = QWidget()
         scroll.setWidget(left_widget)
-
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(8)
+        left_layout.setSpacing(10)
+
+        # --- табы с инструментами SELECT ---
+        tabs = QTabWidget()
+        tabs.setDocumentMode(True)
+        tabs.setTabPosition(QTabWidget.North)
+        tabs.setStyleSheet("""
+                    QTabWidget::pane {
+                        border: 1px solid #374151;
+                    }
+                    QTabBar::tab {
+                        background-color: #020617;
+                        color: #E5E7EB;
+                        padding: 6px 10px;
+                        margin-right: 2px;
+                    }
+                    QTabBar::tab:selected {
+                        background-color: #111827;
+                    }
+                """)
+
+        # ===== Вкладка 1: ФИЛЬТРЫ =====
+        filters_tab = QWidget()
+        filters_layout = QVBoxLayout(filters_tab)
+        filters_layout.setContentsMargins(6, 6, 6, 6)
+        filters_layout.setSpacing(6)
 
         # SELECT
         self.columns_list = QListWidget()
@@ -302,18 +343,17 @@ class DataWindow(QMainWindow):
         sl.addWidget(self.columns_list)
 
         select_section = CollapsibleSection("SELECT — выбор колонок", select_widget)
-        left_layout.addWidget(select_section)
+        filters_layout.addWidget(select_section)
 
         # WHERE
-        self.where_builder = WhereBuilderWidget(self)
+        self.where_builder = WhereBuilderWidget(self.db, self.join_info, self)
         where_section = CollapsibleSection("WHERE — условия отбора", self.where_builder)
-        left_layout.addWidget(where_section)
+        filters_layout.addWidget(where_section)
 
         # Поиск по строкам
         self.search_column = QComboBox()
         self.search_mode = QComboBox()
         self.search_mode.addItems([
-            "",
             "LIKE",
             "ILIKE",
             "~",
@@ -338,7 +378,7 @@ class DataWindow(QMainWindow):
         sh.addWidget(self.btn_apply_search)
 
         search_section = CollapsibleSection("Поиск по строкам (LIKE / Regex / SIMILAR)", search_widget)
-        left_layout.addWidget(search_section)
+        filters_layout.addWidget(search_section)
 
         # Подзапросы ANY / ALL / EXISTS
         self.sub_left_col = QComboBox()
@@ -358,18 +398,26 @@ class DataWindow(QMainWindow):
 
         sub_widget = QWidget()
         sb = QHBoxLayout(sub_widget)
-        sb.addWidget(QLabel("Поле слева:"))
+        sb.addWidget(QLabel("Поле:"))
         sb.addWidget(self.sub_left_col)
         sb.addWidget(self.sub_operator)
         sb.addWidget(self.sub_mode)
-        sb.addWidget(QLabel("Таблица подзапроса:"))
+        sb.addWidget(QLabel("Таблица:"))
         sb.addWidget(self.sub_table)
         sb.addWidget(self.sub_right_col)
         sb.addWidget(self.sub_where)
         sb.addWidget(self.btn_apply_sub)
 
         sub_section = CollapsibleSection("Подзапросы ANY / ALL / EXISTS", sub_widget)
-        left_layout.addWidget(sub_section)
+        filters_layout.addWidget(sub_section)
+
+        filters_layout.addStretch()
+
+        # ===== Вкладка 2: АГРЕГАЦИЯ =====
+        agg_tab = QWidget()
+        agg_layout = QVBoxLayout(agg_tab)
+        agg_layout.setContentsMargins(6, 6, 6, 6)
+        agg_layout.setSpacing(6)
 
         # GROUP BY + агрегаты
         self.group_col = QComboBox()
@@ -379,6 +427,11 @@ class DataWindow(QMainWindow):
 
         self.btn_apply_group = QPushButton("Применить GROUP BY")
         self.btn_apply_group.clicked.connect(self._load_data)
+
+        # когда меняются GROUP BY или агрегат – обновляем допустимые ORDER BY
+        self.group_col.currentIndexChanged.connect(self._update_order_choices)
+        self.aggregate_func.currentIndexChanged.connect(self._update_order_choices)
+        self.aggregate_target.currentIndexChanged.connect(self._update_order_choices)
 
         group_widget = QWidget()
         gl = QHBoxLayout(group_widget)
@@ -390,12 +443,12 @@ class DataWindow(QMainWindow):
         gl.addWidget(self.btn_apply_group)
 
         group_section = CollapsibleSection("GROUP BY / Агрегаты", group_widget)
-        left_layout.addWidget(group_section)
+        agg_layout.addWidget(group_section)
 
         # HAVING
         self.having_builder = HavingBuilderWidget(self)
         having_section = CollapsibleSection("HAVING — условия по агрегатам", self.having_builder)
-        left_layout.addWidget(having_section)
+        agg_layout.addWidget(having_section)
 
         # ORDER BY
         self.order_col = QComboBox()
@@ -412,17 +465,30 @@ class DataWindow(QMainWindow):
         ow.addWidget(self.btn_apply_order)
 
         order_section = CollapsibleSection("ORDER BY", order_widget)
-        left_layout.addWidget(order_section)
+        agg_layout.addWidget(order_section)
 
-        # --- НОВАЯ СЕКЦИЯ: CASE / Работа с NULL ---
-        self._build_case_null_section(left_layout)
+        agg_layout.addStretch()
 
-        # Обновить
+        # ===== Вкладка 3: CASE / NULL =====
+        case_tab = QWidget()
+        case_layout = QVBoxLayout(case_tab)
+        case_layout.setContentsMargins(6, 6, 6, 6)
+        case_layout.setSpacing(6)
+
+        self._build_case_null_section(case_layout)
+        case_layout.addStretch()
+
+        # Добавляем вкладки в таб-виджет
+        tabs.addTab(filters_tab, "Фильтры")
+        tabs.addTab(agg_tab, "Агрегация")
+        tabs.addTab(case_tab, "CASE / NULL")
+
+        left_layout.addWidget(tabs)
+
+        # Кнопка обновления под табами
         self.btn_refresh = QPushButton("Обновить данные")
         self.btn_refresh.clicked.connect(self._load_data)
-        left_layout.addWidget(self.btn_refresh)
-
-        left_layout.addStretch()
+        left_layout.addWidget(self.btn_refresh, alignment=Qt.AlignRight)
 
         split.addWidget(scroll, 3)
 
@@ -873,6 +939,9 @@ class DataWindow(QMainWindow):
     def _load_all_column_lists(self):
         all_cols = list(self.join_info.get("selected_columns", []))
 
+        # запомним базовый список для обычного ORDER BY
+        self._base_order_cols = list(all_cols)
+
         self.columns_list.clear()
         for c in all_cols:
             item = QListWidgetItem(c)
@@ -887,9 +956,60 @@ class DataWindow(QMainWindow):
 
         self.search_column.addItems(all_cols)
         self.sub_left_col.addItems(all_cols)
-        self.order_col.addItems(all_cols)
+        self.order_col.addItems(all_cols)  # базовый набор
         self.group_col.addItems([""] + all_cols)
         self.aggregate_target.addItems([""] + all_cols)
+
+        # сразу привести ORDER BY в согласованное состояние
+        self._update_order_choices()
+
+    def _update_order_choices(self):
+        """
+        Обновить список допустимых вариантов ORDER BY
+        в зависимости от выбранных агрегатов / GROUP BY.
+        """
+        if not hasattr(self, "order_col"):
+            return  # на всякий случай, если метод вызовут слишком рано
+
+        # есть ли сейчас агрегирование
+        aggregate_mode = bool(
+            self.aggregate_func.currentText() and self.aggregate_target.currentText()
+        )
+
+        current = self.order_col.currentText().strip()
+
+        self.order_col.blockSignals(True)
+        self.order_col.clear()
+
+        if not aggregate_mode:
+            # обычный режим — можно сортировать по любой колонке
+            if self._base_order_cols:
+                self.order_col.addItems(self._base_order_cols)
+        else:
+            # агрегатный режим: только GROUP BY и agg_value
+            options: list[str] = []
+
+            group_by = self.group_col.currentText().strip()
+            if group_by:
+                options.append(group_by)
+
+            # результат агрегата — алиас из SELECT
+            options.append("agg_value")
+
+            # пустая строка = без сортировки
+            self.order_col.addItem("")
+            seen: set[str] = set()
+            for opt in options:
+                if opt and opt not in seen:
+                    self.order_col.addItem(opt)
+                    seen.add(opt)
+
+        # если старое значение ещё допустимо — вернуть его
+        idx = self.order_col.findText(current)
+        if idx >= 0:
+            self.order_col.setCurrentIndex(idx)
+
+        self.order_col.blockSignals(False)
 
     def _apply_columns_to_case_null(self):
         """Проставляем список колонок в комбобоксы CASE / COALESCE / NULLIF."""
