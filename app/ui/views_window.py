@@ -1,13 +1,20 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QListWidget, QListWidgetItem,
-    QTableWidget, QTableWidgetItem, QTabWidget, QMessageBox, QHeaderView
+    QTableWidget, QTableWidgetItem, QTabWidget, QMessageBox, QHeaderView,
+    QAbstractItemView,
 )
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
 from app.log.log import app_logger
 from app.ui.cte_builder_window import CteBuilderWindow
+
+from app.ui.cte_storage import GLOBAL_SAVED_CTES
 
 
 class ViewsWindow(QMainWindow):
@@ -25,7 +32,7 @@ class ViewsWindow(QMainWindow):
         self.db = db
 
         # name -> inner SELECT (без WITH)
-        self.saved_ctes: dict[str, str] = {}
+        self.saved_ctes = GLOBAL_SAVED_CTES
 
         self.current_obj: dict | None = None  # {'schema','name','kind',...}
 
@@ -134,18 +141,37 @@ class ViewsWindow(QMainWindow):
         data_layout.setSpacing(6)
 
         self.table_data = QTableWidget()
-        self.table_data.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        # нормальные размеры колонок + горизонтальный скролл
+        header_data = self.table_data.horizontalHeader()
+        header_data.setStretchLastSection(False)
+        header_data.setSectionResizeMode(QHeaderView.Interactive)
+
+        self.table_data.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_data.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        data_layout.addWidget(self.table_data, 1)
+
+        header = self.table_data.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(QHeaderView.Interactive)
+
+
         data_layout.addWidget(self.table_data, 1)
 
         self.tabs.addTab(data_tab, "Данные")
 
         # нижние кнопки
         bottom = QHBoxLayout()
+
+        # кнопку "Показать данные" больше не показываем — данные
+        # подгружаются автоматически при переходе на вкладку "Данные"
         self.btn_open_data = QPushButton("Показать данные")
+        self.btn_open_data.hide()
+
         self.btn_refresh_mat = QPushButton("REFRESH MATERIALIZED VIEW")
         self.btn_drop = QPushButton("Удалить VIEW / MAT VIEW")
 
-        bottom.addWidget(self.btn_open_data)
         bottom.addWidget(self.btn_refresh_mat)
         bottom.addStretch()
         bottom.addWidget(self.btn_drop)
@@ -154,7 +180,7 @@ class ViewsWindow(QMainWindow):
         body_layout.addWidget(right, 1)
 
         # сигналы
-        self.btn_open_data.clicked.connect(self._load_data_for_current)
+        self.tabs.currentChanged.connect(self._on_tab_changed)
         self.btn_refresh_mat.clicked.connect(self._refresh_current_mat_view)
         self.btn_drop.clicked.connect(self._drop_current)
 
@@ -237,6 +263,10 @@ class ViewsWindow(QMainWindow):
         self._load_details_for_current()
         self._update_buttons_state()
 
+        # если уже открыта вкладка "Данные" — сразу обновим превью
+        if self.tabs.currentIndex() == 2:
+            self._load_data_for_current()
+
     def _clear_details(self):
         self.lbl_current.setText("Ничего не выбрано")
         self.lbl_sql.setText("Определение объекта будет показано здесь.")
@@ -252,6 +282,12 @@ class ViewsWindow(QMainWindow):
         )
         is_mat = has_obj and self.current_obj.get("kind") == "MATERIALIZED VIEW"
         self.btn_refresh_mat.setEnabled(is_mat)
+
+    def _on_tab_changed(self, index: int):
+        """Автоподгрузка данных при переходе на вкладку «Данные»."""
+        # 0 — Структура, 1 — SQL, 2 — Данные
+        if index == 2 and self.current_obj is not None:
+            self._load_data_for_current()
 
     # ------------------------------------------------------------------
     # Детали объекта
@@ -276,8 +312,15 @@ class ViewsWindow(QMainWindow):
             self._load_definition_for_view(kind, schema, name)
 
     def _load_columns_for_view(self, schema: str, name: str):
+        """Структура для VIEW и MATERIALIZED VIEW.
+
+        Сначала пробуем information_schema.columns, если пусто —
+        падаем обратно на pg_catalog (работает и для мат. представлений).
+        """
+        cols = []
         try:
             with self.db.cursor() as cur:
+                # обычный путь — information_schema
                 cur.execute(
                     """
                     SELECT ordinal_position, column_name, data_type
@@ -288,10 +331,32 @@ class ViewsWindow(QMainWindow):
                     (schema, name),
                 )
                 cols = cur.fetchall()
+
+                # если вдруг пусто (часть мат. представлений), берём из pg_catalog
+                if not cols:
+                    cur.execute(
+                        """
+                        SELECT
+                            a.attnum AS ordinal_position,
+                            a.attname AS column_name,
+                            pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type
+                        FROM pg_catalog.pg_attribute a
+                        JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
+                        JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+                        WHERE n.nspname = %s
+                          AND c.relname = %s
+                          AND a.attnum > 0
+                          AND NOT a.attisdropped
+                        ORDER BY a.attnum;
+                        """,
+                        (schema, name),
+                    )
+                    cols = cur.fetchall()
         except Exception as e:
             app_logger.error(f"Ошибка получения структуры {schema}.{name}: {e}")
             cols = []
 
+        self.table_columns.setRowCount(0)
         self.table_columns.setRowCount(len(cols))
         for i, col in enumerate(cols):
             self.table_columns.setItem(i, 0, QTableWidgetItem(str(col["ordinal_position"])))
@@ -408,8 +473,6 @@ class ViewsWindow(QMainWindow):
                 val = row[col]
                 text = "" if val is None else str(val)
                 self.table_data.setItem(r_idx, c_idx, QTableWidgetItem(text))
-
-        self.tabs.setCurrentIndex(2)
 
     # ------------------------------------------------------------------
     # REFRESH / DROP

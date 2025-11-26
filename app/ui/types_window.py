@@ -38,6 +38,7 @@ class TypesWindow(QMainWindow):
         self.table_details = None
         self.enum_add_input = None
         self.btn_enum_add = None
+        self.btn_enum_delete = None  # ← добавили
         self.lbl_details_title = None
 
         self._build_ui()
@@ -143,17 +144,23 @@ class TypesWindow(QMainWindow):
         self.table_details.verticalHeader().setVisible(False)
 
         right_box.addWidget(self.table_details, 1)
-
-        # блок для добавления значения в ENUM
+        # блок для работы со значениями ENUM
         enum_row = QHBoxLayout()
         enum_row.setSpacing(6)
+
         self.enum_add_input = QLineEdit()
         self.enum_add_input.setPlaceholderText("Новое значение ENUM…")
-        self.btn_enum_add = QPushButton("Добавить значение")
+
+        self.btn_enum_add = QPushButton("Добавить")
         self.btn_enum_add.setCursor(Qt.PointingHandCursor)
+
+        self.btn_enum_delete = QPushButton("Удалить выбранное")
+        self.btn_enum_delete.setCursor(Qt.PointingHandCursor)
 
         enum_row.addWidget(self.enum_add_input, 1)
         enum_row.addWidget(self.btn_enum_add)
+        enum_row.addWidget(self.btn_enum_delete)
+
         right_box.addLayout(enum_row)
 
         body.addLayout(right_box, 2)
@@ -167,8 +174,8 @@ class TypesWindow(QMainWindow):
         self.btn_new_composite.clicked.connect(self._on_new_composite)
         self.btn_drop_type.clicked.connect(self._on_drop_type)
         self.btn_enum_add.clicked.connect(self._on_enum_add)
+        self.btn_enum_delete.clicked.connect(self._on_enum_delete_value)
         self.list_types.currentItemChanged.connect(self._on_type_selected)
-
     # ------------------------------------------------------------------
     # Загрузка списка типов и отображение деталей
     # ------------------------------------------------------------------
@@ -240,8 +247,13 @@ class TypesWindow(QMainWindow):
         for row, label in enumerate(labels):
             self.table_details.setItem(row, 0, QTableWidgetItem(label))
 
+        # авто-выделяем первую строку, чтобы кнопка сразу работала
+        if self.table_details.rowCount() > 0:
+            self.table_details.setCurrentCell(0, 0)
+
         self._enable_enum_controls(True)
         self.lbl_details_title.setText(f"ENUM {schema + '.' if schema else ''}{type_name}")
+
 
     def _show_composite_details(self, type_name: str, schema: str | None):
         """Показываем поля составного типа."""
@@ -378,6 +390,51 @@ class TypesWindow(QMainWindow):
         self.enum_add_input.clear()
         self._show_enum_details(type_name, t.get("schema"))
 
+    def _on_enum_delete_value(self):
+        """Удаление выбранного значения из ENUM."""
+        current = self.list_types.currentItem()
+        if current is None:
+            return
+
+        t = current.data(Qt.UserRole) or {}
+        if t.get("kind") != "e":
+            return  # нажали, когда выбран не ENUM
+
+        type_name = t["name"]
+
+        item = self.table_details.currentItem()
+        if item is None:
+            QMessageBox.warning(
+                self,
+                "Нет выбранного значения",
+                "Сначала выберите строку в таблице значений ENUM справа."
+            )
+            return
+
+        value = (item.text() or "").strip()
+        if not value:
+            return
+
+        res = QMessageBox.question(
+            self,
+            "Удалить значение ENUM",
+            f"Удалить значение {value!r} из ENUM {type_name}?\n\n"
+            f"Если это значение уже используется в таблицах,\n"
+            f"PostgreSQL может запретить его удаление.",
+        )
+        if res != QMessageBox.Yes:
+            return
+
+        try:
+            self.db.drop_enum_value(type_name, value)
+        except Exception as e:
+            app_logger.error(f"Ошибка удаления значения {value!r} из ENUM {type_name}: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось удалить значение:\n{e}")
+            return
+
+        # перечитать список значений
+        self._show_enum_details(type_name, t.get("schema"))
+
     def _on_drop_type(self):
         """Удаление выбранного типа (DROP TYPE)."""
         current = self.list_types.currentItem()
@@ -434,6 +491,10 @@ class TypesWindow(QMainWindow):
     def _enable_enum_controls(self, flag: bool):
         self.enum_add_input.setEnabled(flag)
         self.btn_enum_add.setEnabled(flag)
+        # аккуратно работаем с кнопкой удаления, вдруг её ещё нет
+        btn_del = getattr(self, "btn_enum_delete", None)
+        if btn_del is not None:
+            btn_del.setEnabled(flag)
 
     def reload_types(self):
         """Перечитать список пользовательских типов из БД."""

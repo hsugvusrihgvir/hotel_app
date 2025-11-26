@@ -2,15 +2,16 @@ from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
     QListWidget, QListWidgetItem, QFrame, QScrollArea, QHeaderView,
-    QTabWidget,
+    QTabWidget, QInputDialog, QAbstractItemView,   # ← ДОБАВЬ ЭТО
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QRegularExpression
+from PySide6.QtGui import QColor, QRegularExpressionValidator
 
 from app.log.log import app_logger
 from app.ui.collapsible_section import CollapsibleSection
 from app.ui.data_window import WhereBuilderWidget, HavingBuilderWidget
 
+import re
 
 class CteBuilderWindow(QMainWindow):
     """
@@ -72,6 +73,11 @@ class CteBuilderWindow(QMainWindow):
 
         self.cte_name_edit = QLineEdit()
         self.cte_name_edit.setPlaceholderText("Имя CTE, например cte_report")
+
+        # валидатор имени: только латиница, цифры и "_", не с цифры
+        name_re = QRegularExpression(r"^[A-Za-z_][A-Za-z0-9_]*$")
+        name_validator = QRegularExpressionValidator(name_re, self)
+        self.cte_name_edit.setValidator(name_validator)
 
         self.source_kind = QComboBox()
         self.source_kind.addItems(["Таблица", "Представление"])
@@ -525,6 +531,27 @@ class CteBuilderWindow(QMainWindow):
                 text = "" if val is None else str(val)
                 self.table.setItem(r_idx, c_idx, QTableWidgetItem(text))
 
+        # ---------------------------------------------------------
+        # Валидация имени объекта (CTE / VIEW / MAT VIEW)
+        # ---------------------------------------------------------
+
+    def _validate_object_name(self, name: str, title: str) -> bool:
+        name = name.strip()
+        if not name:
+            QMessageBox.warning(self, title, "Имя не может быть пустым.")
+            return False
+
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
+            QMessageBox.warning(
+                self,
+                title,
+                "Имя должно состоять из латинских букв, цифр и подчёркивания\n"
+                "и не начинаться с цифры.",
+            )
+            return False
+
+        return True
+
     # ---------------------------------------------------------
     # Сохранение CTE / VIEW / MATERIALIZED VIEW
     # ---------------------------------------------------------
@@ -532,8 +559,7 @@ class CteBuilderWindow(QMainWindow):
     def _save_as_cte(self):
         """Сохранить текущий подзапрос как именованный CTE в модуле представлений."""
         name = self.cte_name_edit.text().strip()
-        if not name:
-            QMessageBox.warning(self, "Имя CTE", "Сначала введите имя CTE.")
+        if not self._validate_object_name(name, "Имя CTE"):
             return
 
         inner_sql = self._build_inner_select()
@@ -559,8 +585,7 @@ class CteBuilderWindow(QMainWindow):
         """Сохранить текущий подзапрос как VIEW в БД."""
         sql_select = self._build_inner_select()
         name = self.cte_name_edit.text().strip()
-        if not name:
-            QMessageBox.warning(self, "Имя CTE", "Сначала введите имя для CTE / представления.")
+        if not self._validate_object_name(name, "Имя представления"):
             return
 
         try:
@@ -576,8 +601,7 @@ class CteBuilderWindow(QMainWindow):
         """Сохранить текущий подзапрос как MATERIALIZED VIEW в БД."""
         sql_select = self._build_inner_select()
         name = self.cte_name_edit.text().strip()
-        if not name:
-            QMessageBox.warning(self, "Имя CTE", "Сначала введите имя для CTE / представления.")
+        if not self._validate_object_name(name, "Имя MATERIALIZED VIEW"):
             return
 
         try:

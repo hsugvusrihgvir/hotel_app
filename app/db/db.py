@@ -496,6 +496,38 @@ class Database:
 
         app_logger.info(f"В ENUM-тип {type_name} добавлено значение {value!r}")
 
+    def drop_enum_value(self, type_name: str, value: str):
+        """
+        Удалить значение из ENUM-типа.
+
+        ВАЖНО: ALTER TYPE ... DROP VALUE есть только в PostgreSQL 16+.
+        На более старых версиях сервер это просто не умеет.
+        """
+        value = (value or "").strip()
+        if not value:
+            return
+
+        with self.cursor() as cur:
+            # проверяем версию сервера
+            cur.execute("SHOW server_version_num")
+            row = cur.fetchone()
+            # RealDictCursor → row — dict
+            ver_num = int(row.get("server_version_num") if isinstance(row, dict) else row[0])
+
+            if ver_num < 160000:
+                # даём понятную ошибку
+                raise RuntimeError(
+                    "Удаление значений ENUM поддерживается только в PostgreSQL 16 и новее. "
+                    f"Текущая версия сервера: {ver_num}."
+                )
+
+            query = sql.SQL("ALTER TYPE {} DROP VALUE %s").format(
+                sql.Identifier(type_name)
+            )
+            cur.execute(query, (value,))
+
+        app_logger.info(f"Из ENUM-типа {type_name} удалено значение {value!r}")
+
     def create_composite_type(self, name: str, fields: list[tuple[str, str]]):
         """
         CREATE TYPE <name> AS (field1 type1, field2 type2, ...).

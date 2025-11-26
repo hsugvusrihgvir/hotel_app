@@ -1,16 +1,20 @@
 from typing import Optional, Set, Dict
+import re
 
 from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
     QListWidget, QListWidgetItem, QFrame, QScrollArea, QHeaderView,
-    QTabWidget,  # ← добавь вот это
+    QTabWidget, QInputDialog, QDialog,
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QRegularExpression
+from PySide6.QtGui import QColor, QRegularExpressionValidator
 
 from app.log.log import app_logger
 from app.ui.collapsible_section import CollapsibleSection
+from app.ui.cte_storage import GLOBAL_SAVED_CTES
+
+import re
 
 
 # ============================================================
@@ -26,25 +30,11 @@ class WhereBuilderWidget(QWidget):
     - несколько условий, объединённых AND
     """
 
-    def __init__(self, db, join_info, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.db = db
-        self.join_info = join_info
-
-        self.setWindowTitle("Расширенный SELECT")
-        self.resize(1350, 780)
-
         # 'table.col' -> data_type
         self.col_types: dict[str, str] = {}
-        # alias последней строковой операции
-        self.current_string_alias: Optional[str] = None
-        # текстовые вычисленные колонки (названия)
-        self.string_virtual_columns: Set[str] = set()
-        # alias -> SQL-выражение (без "AS alias")
-        self.string_virtual_expr: Dict[str, str] = {}
-
-        # базовый список колонок, по которым можно сортировать в обычном режиме
-        self._base_order_cols: list[str] = []
+        self.columns: list[str] = []
 
         self._build_ui()
 
@@ -79,9 +69,19 @@ class WhereBuilderWidget(QWidget):
         self.conditions_list = QListWidget()
         main.addWidget(self.conditions_list)
 
-        btn_clear = QPushButton("Очистить условия")
+        buttons_row = QHBoxLayout()
+        btn_delete = QPushButton("Удалить выбранное")
+        btn_clear = QPushButton("Очистить все")
+        buttons_row.addWidget(btn_delete)
+        buttons_row.addWidget(btn_clear)
+        buttons_row.addStretch()
+        main.addLayout(buttons_row)
+
+        btn_delete.clicked.connect(self._delete_selected)
         btn_clear.clicked.connect(self.conditions_list.clear)
-        main.addWidget(btn_clear)
+
+        # двойной клик по условию — тоже удаляет его
+        self.conditions_list.itemDoubleClicked.connect(self._on_item_double_clicked)
 
     # ------------ API -------------
 
@@ -100,26 +100,60 @@ class WhereBuilderWidget(QWidget):
     # ------------ внутренняя логика -------------
 
     def _on_add_condition(self):
-        col = self.cb_column.currentText()
-        op = self.cb_operator.currentText()
+        col = self.cb_column.currentText().strip()
+        op = self.cb_operator.currentText().strip()
         raw_val = self.value_edit.text().strip()
 
         if not col or not op:
             QMessageBox.warning(self, "Внимание", "Выберите колонку и оператор.")
             return
+
         if raw_val == "":
             QMessageBox.warning(self, "Внимание", "Введите значение.")
             return
 
-        data_type = self.col_types.get(col, "text").lower()
+        data_type = self.col_types.get(col, "").lower()
+
+        # группы типов для простых проверок
+        numeric_like = ("smallint", "integer", "bigint", "numeric", "real", "double")
+        bool_like = ("boolean",)
+        date_like = ("date", "timestamp", "timestamp with time zone", "time")
+
+        # страховка: не даём LIKE/ILIKE по числам, датам и bool,
+        # даже если вдруг оператор как-то сюда попал
+        if op in ("LIKE", "ILIKE") and (
+                any(t in data_type for t in numeric_like)
+                or any(t in data_type for t in bool_like)
+                or any(t in data_type for t in date_like)
+        ):
+            QMessageBox.warning(
+                self,
+                "Недопустимый оператор",
+                "Для этого типа столбца оператор LIKE/ILIKE не используется.\n"
+                "Выберите другой оператор (например, =, <, > и т.п.).",
+            )
+            return
+
         try:
             literal = self._format_literal(raw_val, data_type, op)
         except ValueError as e:
             QMessageBox.warning(self, "Ошибка значения", str(e))
             return
 
+        # здесь никакого CAST и прочей магии — ровно то, что выбрал пользователь
         self.conditions_list.addItem(f"{col} {op} {literal}")
         self.value_edit.clear()
+
+    def _delete_selected(self):
+        """Удалить выбранные условия из списка."""
+        for item in self.conditions_list.selectedItems():
+            row = self.conditions_list.row(item)
+            self.conditions_list.takeItem(row)
+
+    def _on_item_double_clicked(self, item):
+        """Двойной клик по условию — удаление одной строки."""
+        row = self.conditions_list.row(item)
+        self.conditions_list.takeItem(row)
 
     def _format_literal(self, raw_val: str, data_type: str, op: str) -> str:
         numeric_like = ("smallint", "integer", "bigint", "numeric", "real", "double")
@@ -186,6 +220,9 @@ class HavingBuilderWidget(QWidget):
         self.cb_column = QComboBox()
         row.addWidget(self.cb_column)
 
+        # при смене колонки — пересобираем список допустимых операторов
+        self.cb_column.currentIndexChanged.connect(self._update_operators_for_column)
+
         row.addWidget(QLabel("Оператор:"))
         self.cb_op = QComboBox()
         self.cb_op.addItems(["=", "<>", ">", "<", ">=", "<="])
@@ -213,6 +250,8 @@ class HavingBuilderWidget(QWidget):
         self.col_types = dict(col_types)
         self.cb_column.clear()
         self.cb_column.addItems(self.columns)
+        # сразу подстроить операторы под первый столбец
+        self._update_operators_for_column()
 
     def get_conditions(self) -> list[str]:
         res = []
@@ -244,6 +283,28 @@ class HavingBuilderWidget(QWidget):
         func = f"{agg}({col})"
         self.conditions_list.addItem(f"{func} {op} {literal}")
         self.value_edit.clear()
+
+        # ------------ внутренняя логика -------------
+
+    def _update_operators_for_column(self):
+        """
+        Для HAVING оставляем только числовые сравнения.
+        Операторы не зависят от типа колонки, агрегаты всё равно дают число.
+        """
+        current = self.cb_op.currentText()
+
+        ops = ["=", "<>", ">", "<", ">=", "<="]
+
+        self.cb_op.blockSignals(True)
+        self.cb_op.clear()
+        self.cb_op.addItems(ops)
+
+        # если старый оператор ещё допустим — вернём его
+        idx = self.cb_op.findText(current)
+        if idx >= 0:
+            self.cb_op.setCurrentIndex(idx)
+
+        self.cb_op.blockSignals(False)
 
     def _format_literal(self, raw_val: str) -> str:
         # для HAVING почти всегда нужно число
@@ -292,6 +353,42 @@ class DataWindow(QMainWindow):
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.setSpacing(10)
+
+        # панель сохранения запроса (VIEW / MATERIALIZED VIEW / CTE)
+        save_panel = QWidget()
+        save_layout = QHBoxLayout(save_panel)
+        save_layout.setContentsMargins(8, 8, 8, 8)
+        save_layout.setSpacing(10)
+
+        lbl_save = QLabel("Сохранить текущий SELECT как:")
+        lbl_save.setStyleSheet("color: #e5e7eb; font-weight: 600;")
+
+        self.btn_save_view = QPushButton("VIEW")
+        self.btn_save_mat_view = QPushButton("MATERIALIZED VIEW")
+        self.btn_save_cte = QPushButton("CTE")
+
+        for btn in (self.btn_save_view, self.btn_save_mat_view, self.btn_save_cte):
+            btn.setMinimumHeight(32)
+            btn.setStyleSheet(
+                "QPushButton {"
+                "  background-color: #4b5563;"
+                "  color: #e5e7eb;"
+                "  padding: 6px 12px;"
+                "  border-radius: 6px;"
+                "  font-weight: 600;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #6b7280;"
+                "}"
+            )
+
+        save_layout.addWidget(lbl_save)
+        save_layout.addWidget(self.btn_save_view)
+        save_layout.addWidget(self.btn_save_mat_view)
+        save_layout.addWidget(self.btn_save_cte)
+        save_layout.addStretch()
+
+        main_layout.addWidget(save_panel)
 
         # верх: слева — конструкторы, справа — панель строковых операций
         top_container = QWidget()
@@ -346,7 +443,7 @@ class DataWindow(QMainWindow):
         filters_layout.addWidget(select_section)
 
         # WHERE
-        self.where_builder = WhereBuilderWidget(self.db, self.join_info, self)
+        self.where_builder = WhereBuilderWidget(self)
         where_section = CollapsibleSection("WHERE — условия отбора", self.where_builder)
         filters_layout.addWidget(where_section)
 
@@ -419,28 +516,65 @@ class DataWindow(QMainWindow):
         agg_layout.setContentsMargins(6, 6, 6, 6)
         agg_layout.setSpacing(6)
 
-        # GROUP BY + агрегаты
+        # GROUP BY + агрегаты (включая ROLLUP / CUBE / GROUPING SETS)
+
+        # режим группировки
+        self.group_mode = QComboBox()
+        self.group_mode.addItem("Нет", userData="none")
+        self.group_mode.addItem("Обычный GROUP BY", userData="plain")
+        self.group_mode.addItem("ROLLUP", userData="rollup")
+        self.group_mode.addItem("CUBE", userData="cube")
+        self.group_mode.addItem("GROUPING SETS", userData="grouping_sets")
+
+        # до трёх уровней группировки
         self.group_col = QComboBox()
+        self.group_col2 = QComboBox()
+        self.group_col3 = QComboBox()
+
+        # агрегат
         self.aggregate_func = QComboBox()
         self.aggregate_func.addItems(["", "COUNT", "SUM", "AVG", "MIN", "MAX"])
         self.aggregate_target = QComboBox()
 
-        self.btn_apply_group = QPushButton("Применить GROUP BY")
+        self.btn_apply_group = QPushButton("Применить группировку")
         self.btn_apply_group.clicked.connect(self._load_data)
 
-        # когда меняются GROUP BY или агрегат – обновляем допустимые ORDER BY
+        # когда меняются режим/колонки/агрегат – обновляем допустимые ORDER BY
+        self.group_mode.currentIndexChanged.connect(self._update_order_choices)
         self.group_col.currentIndexChanged.connect(self._update_order_choices)
+        self.group_col2.currentIndexChanged.connect(self._update_order_choices)
+        self.group_col3.currentIndexChanged.connect(self._update_order_choices)
         self.aggregate_func.currentIndexChanged.connect(self._update_order_choices)
         self.aggregate_target.currentIndexChanged.connect(self._update_order_choices)
 
         group_widget = QWidget()
-        gl = QHBoxLayout(group_widget)
-        gl.addWidget(QLabel("GROUP BY:"))
-        gl.addWidget(self.group_col)
-        gl.addWidget(QLabel("Агрегат:"))
-        gl.addWidget(self.aggregate_func)
-        gl.addWidget(self.aggregate_target)
-        gl.addWidget(self.btn_apply_group)
+        gw_layout = QVBoxLayout(group_widget)
+        gw_layout.setContentsMargins(0, 0, 0, 0)
+        gw_layout.setSpacing(4)
+
+        # строка 1 — режим
+        mode_row = QHBoxLayout()
+        mode_row.addWidget(QLabel("Режим:"))
+        mode_row.addWidget(self.group_mode)
+        mode_row.addStretch()
+
+        # строка 2 — уровни группировки
+        cols_row = QHBoxLayout()
+        cols_row.addWidget(QLabel("Уровни группировки:"))
+        cols_row.addWidget(self.group_col)
+        cols_row.addWidget(self.group_col2)
+        cols_row.addWidget(self.group_col3)
+
+        # строка 3 — агрегат
+        agg_row = QHBoxLayout()
+        agg_row.addWidget(QLabel("Агрегат:"))
+        agg_row.addWidget(self.aggregate_func)
+        agg_row.addWidget(self.aggregate_target)
+        agg_row.addWidget(self.btn_apply_group)
+
+        gw_layout.addLayout(mode_row)
+        gw_layout.addLayout(cols_row)
+        gw_layout.addLayout(agg_row)
 
         group_section = CollapsibleSection("GROUP BY / Агрегаты", group_widget)
         agg_layout.addWidget(group_section)
@@ -518,12 +652,16 @@ class DataWindow(QMainWindow):
         self.table = QTableWidget()
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
-        main_layout.addWidget(self.table)
 
+        # нормальные размеры колонок + горизонтальный скролл
         header = self.table.horizontalHeader()
-        header.setStretchLastSection(True)
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(QHeaderView.Interactive)  # можно руками тянуть
 
+        self.table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        main_layout.addWidget(self.table)
 
 
         # служебная инфа
@@ -535,6 +673,11 @@ class DataWindow(QMainWindow):
         self._load_string_op_columns()
 
         self._apply_table_style()
+
+        # сохранение запроса как VIEW / MATERIALIZED VIEW / CTE
+        self.btn_save_view.clicked.connect(self._save_as_view)
+        self.btn_save_mat_view.clicked.connect(self._save_as_mat_view)
+        self.btn_save_cte.clicked.connect(self._save_as_cte)
 
     def _apply_table_style(self):
         self.table.setStyleSheet("""
@@ -952,12 +1095,20 @@ class DataWindow(QMainWindow):
         self.sub_left_col.clear()
         self.order_col.clear()
         self.group_col.clear()
+        self.group_col2.clear()
+        self.group_col3.clear()
         self.aggregate_target.clear()
 
         self.search_column.addItems(all_cols)
         self.sub_left_col.addItems(all_cols)
         self.order_col.addItems(all_cols)  # базовый набор
-        self.group_col.addItems([""] + all_cols)
+
+        # уровни группировки: до трёх колонок
+        group_items = [""] + all_cols
+        self.group_col.addItems(group_items)
+        self.group_col2.addItems(group_items)
+        self.group_col3.addItems(group_items)
+
         self.aggregate_target.addItems([""] + all_cols)
 
         # сразу привести ORDER BY в согласованное состояние
@@ -986,12 +1137,11 @@ class DataWindow(QMainWindow):
             if self._base_order_cols:
                 self.order_col.addItems(self._base_order_cols)
         else:
-            # агрегатный режим: только GROUP BY и agg_value
+            # агрегатный режим: только колонки группировки и agg_value
             options: list[str] = []
 
-            group_by = self.group_col.currentText().strip()
-            if group_by:
-                options.append(group_by)
+            group_cols = self._get_group_columns()
+            options.extend(group_cols)
 
             # результат агрегата — алиас из SELECT
             options.append("agg_value")
@@ -1010,6 +1160,45 @@ class DataWindow(QMainWindow):
             self.order_col.setCurrentIndex(idx)
 
         self.order_col.blockSignals(False)
+
+    def _get_group_columns(self) -> list[str]:
+        """Текущий набор колонок для группировки в заданном порядке.
+
+        Игнорируем пустые значения и дубликаты, чтобы не собирать
+        некорректные конструкции в GROUP BY / ROLLUP / CUBE.
+        """
+        cols: list[str] = []
+        for cb in (self.group_col, self.group_col2, self.group_col3):
+            if cb is None:
+                continue
+            name = cb.currentText().strip()
+            if name and name not in cols:
+                cols.append(name)
+        return cols
+
+    def _build_grouping_sets_sql(self, cols: list[str]) -> str:
+        """Собрать выражение для GROUPING SETS по выбранным колонкам.
+
+        Строим все непустые комбинации колонок + пустое множество для
+        общего итога. Для 3 колонок получится, например:
+        GROUPING SETS ((a), (b), (c), (a, b), (a, c), (b, c), (a, b, c), ()).
+        """
+        if not cols:
+            return ""
+
+        n = len(cols)
+        sets: list[str] = []
+
+        # все непустые подмножества
+        for mask in range(1, 1 << n):
+            subset = [cols[i] for i in range(n) if mask & (1 << i)]
+            if subset:
+                sets.append("(" + ", ".join(subset) + ")")
+
+        # общий итог
+        sets.append("()")
+
+        return ", ".join(sets)
 
     def _apply_columns_to_case_null(self):
         """Проставляем список колонок в комбобоксы CASE / COALESCE / NULLIF."""
@@ -1323,6 +1512,146 @@ class DataWindow(QMainWindow):
 
         return exprs
 
+    def _ask_object_name(self, title: str, label: str) -> Optional[str]:
+        """Диалог запроса имени объекта (VIEW / MAT VIEW / CTE) с валидатором."""
+        dlg = QInputDialog(self)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setWindowTitle(title)
+        dlg.setLabelText(label)
+
+        # навешиваем валидатор на поле ввода, чтобы нельзя было вводить
+        # недопустимые символы (только латиница, цифры и "_",
+        # первый символ — буква или подчёркивание)
+        line_edit = dlg.findChild(QLineEdit)
+        if line_edit is not None:
+            regex = QRegularExpression(r"^[A-Za-z_][A-Za-z0-9_]*$")
+            validator = QRegularExpressionValidator(regex, line_edit)
+            line_edit.setValidator(validator)
+            line_edit.setPlaceholderText("Например: report_view_1")
+
+        if dlg.exec() != QDialog.Accepted:
+            return None
+
+        name = dlg.textValue().strip()
+        if not name:
+            QMessageBox.warning(self, title, "Имя не может быть пустым.")
+            return None
+
+        # дополнительная проверка на случай, если по какой-то причине
+        # валидатор не сработал
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
+            QMessageBox.warning(
+                self,
+                title,
+                "Имя должно состоять из латинских букв, цифр и подчёркивания\n"
+                "и не начинаться с цифры.",
+            )
+            return None
+
+        return name
+
+    def _get_current_select_sql(self) -> str:
+        """Построить SELECT для сохранения (без завершающей точки с запятой)."""
+        sql = self._build_sql()
+        sql = sql.strip()
+        if sql.endswith(";"):
+            sql = sql[:-1].strip()
+        return sql
+
+    def _save_as_view(self):
+        """Сохранить текущий SELECT как обычное представление (VIEW)."""
+        title = "Сохранить как VIEW"
+        sql = self._get_current_select_sql()
+        if not sql:
+            QMessageBox.warning(self, title, "Нет запроса для сохранения.")
+            return
+
+        name = self._ask_object_name(title, "Имя представления (без схемы):")
+        if not name:
+            return
+
+        try:
+            # helper из db.py: CREATE OR REPLACE VIEW name AS <sql>
+            self.db.create_view(name, sql)
+            QMessageBox.information(
+                self,
+                title,
+                f'Представление "{name}" создано или обновлено.\n'
+                "Оно доступно в окне «Представления и CTE».",
+            )
+            app_logger.info(f"VIEW {name} создано из DataWindow")
+        except Exception as e:
+            app_logger.error(f"Ошибка создания VIEW {name} из DataWindow: {e}")
+            QMessageBox.critical(
+                self,
+                title,
+                f"Не удалось сохранить представление:\n{e}",
+            )
+
+    def _save_as_mat_view(self):
+        """Сохранить текущий SELECT как материализованное представление."""
+        title = "Сохранить как MATERIALIZED VIEW"
+        sql = self._get_current_select_sql()
+        if not sql:
+            QMessageBox.warning(self, title, "Нет запроса для сохранения.")
+            return
+
+        name = self._ask_object_name(title, "Имя MATERIALIZED VIEW (без схемы):")
+        if not name:
+            return
+
+        try:
+            self.db.create_mat_view(name, sql)
+            QMessageBox.information(
+                self,
+                title,
+                f'Материализованное представление "{name}" создано.\n'
+                "Его можно обновлять через REFRESH в окне «Представления и CTE».",
+            )
+            app_logger.info(f"MATERIALIZED VIEW {name} создано из DataWindow")
+        except Exception as e:
+            app_logger.error(f"Ошибка создания MATERIALIZED VIEW {name} из DataWindow: {e}")
+            QMessageBox.critical(
+                self,
+                title,
+                "Не удалось создать материализованное представление:\n"
+                f"{e}\n\n"
+                "Если объект с таким именем уже существует, удалите его\n"
+                "в окне «Представления и CTE» и повторите попытку.",
+            )
+
+    def _save_as_cte(self):
+        """Сохранить текущий SELECT как CTE в менеджере представлений."""
+        title = "Сохранить как CTE"
+        sql = self._get_current_select_sql()
+        if not sql:
+            QMessageBox.warning(self, title, "Нет запроса для сохранения.")
+            return
+
+        name = self._ask_object_name(title, "Имя CTE (будет использоваться в WITH):")
+        if not name:
+            return
+
+        if name in GLOBAL_SAVED_CTES:
+            res = QMessageBox.question(
+                self,
+                title,
+                f'CTE с именем "{name}" уже существует. Перезаписать?',
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if res != QMessageBox.Yes:
+                return
+
+        GLOBAL_SAVED_CTES[name] = sql
+        QMessageBox.information(
+            self,
+            title,
+            f'CTE "{name}" сохранён.\n'
+            "Он появится в окне «Представления и CTE» после обновления списка.",
+        )
+        app_logger.info(f"CTE {name} сохранён из DataWindow")
+
     # ---------------------------------------------------------
     # SQL builder
     # ---------------------------------------------------------
@@ -1331,16 +1660,32 @@ class DataWindow(QMainWindow):
         info = self.join_info
         all_cols = info.get("selected_columns", [])
 
-        checked = []
+        checked: list[str] = []
         for i in range(self.columns_list.count()):
             item = self.columns_list.item(i)
             if item.checkState() == Qt.Checked:
                 checked.append(item.text())
 
+        # базовый список выбранных колонок
         if checked:
-            cols = ", ".join(checked)
+            base_cols = checked
         else:
-            cols = ", ".join(all_cols) if all_cols else "*"
+            base_cols = all_cols if all_cols else []
+
+        # безопасный SELECT-список: алиасим table.col → table_col
+        select_parts: list[str] = []
+        for c in base_cols:
+            upper = c.upper()
+            # если пользователь уже сам написал "expr AS alias" — не трогаем
+            if " AS " in upper:
+                select_parts.append(c)
+                continue
+
+            # table.col → table_col, убираем точки и кавычки
+            alias = c.replace('"', "").replace(".", "_")
+            select_parts.append(f"{c} AS {alias}")
+
+        cols = ", ".join(select_parts) if select_parts else "*"
 
         aggregate_mode = bool(
             self.aggregate_func.currentText() and self.aggregate_target.currentText()
@@ -1385,18 +1730,25 @@ class DataWindow(QMainWindow):
             val = self.search_value.text().strip()
             esc = val.replace("'", "''")
 
+            # тип колонки — чтобы понимать, текстовая она или нет
+            data_type = self.col_types.get(col, "").lower()
+            is_text = any(x in data_type for x in ("char", "text"))
+
+            # для нетекстовых колонок ищем по col::text
+            col_expr = col if (is_text or not data_type) else f"{col}::text"
+
             if mode in ("LIKE", "ILIKE"):
                 if "%" not in esc and "_" not in esc:
                     esc = f"%{esc}%"
-                cond = f"{col} {mode} '{esc}'"
+                cond = f"{col_expr} {mode} '{esc}'"
             elif mode in ("~", "~*", "!~", "!~*"):
-                cond = f"{col} {mode} '{esc}'"
+                cond = f"{col_expr} {mode} '{esc}'"
             elif mode == "SIMILAR TO":
-                cond = f"{col} SIMILAR TO '{esc}'"
+                cond = f"{col_expr} SIMILAR TO '{esc}'"
             elif mode == "NOT SIMILAR TO":
-                cond = f"{col} NOT SIMILAR TO '{esc}'"
+                cond = f"{col_expr} NOT SIMILAR TO '{esc}'"
             else:
-                cond = f"{col} LIKE '{esc}'"
+                cond = f"{col_expr} LIKE '{esc}'"
 
             where_clauses.append(cond)
 
@@ -1428,10 +1780,28 @@ class DataWindow(QMainWindow):
         if where_clauses:
             q += " WHERE " + " AND ".join(where_clauses)
 
-        # GROUP BY
-        group_by = self.group_col.currentText().strip()
-        if group_by:
-            q += f" GROUP BY {group_by}"
+        # GROUP BY / ROLLUP / CUBE / GROUPING SETS
+        group_cols = self._get_group_columns()
+        mode = self.group_mode.currentData() if hasattr(self, "group_mode") else "none"
+
+        if group_cols and mode != "none":
+            if mode == "plain":
+                group_expr = ", ".join(group_cols)
+                q += f" GROUP BY {group_expr}"
+            elif mode == "rollup":
+                inner = ", ".join(group_cols)
+                q += f" GROUP BY ROLLUP ({inner})"
+            elif mode == "cube":
+                inner = ", ".join(group_cols)
+                q += f" GROUP BY CUBE ({inner})"
+            elif mode == "grouping_sets":
+                sets_sql = self._build_grouping_sets_sql(group_cols)
+                if sets_sql:
+                    q += f" GROUP BY GROUPING SETS ({sets_sql})"
+            else:
+                # на всякий случай — как обычный GROUP BY
+                group_expr = ", ".join(group_cols)
+                q += f" GROUP BY {group_expr}"
 
         # HAVING
         having_clauses = self.having_builder.get_conditions()
