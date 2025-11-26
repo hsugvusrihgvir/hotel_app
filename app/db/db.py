@@ -279,29 +279,78 @@ class HotelDB:
             self.log.addError(str(e) + "\n\t" + s + "\n")
             raise RuntimeError("Ошибка при проверке существования комнат: " + self._friendly_db_error(e))
 
-    # загрузка данных с сортировкой и фильтрами (старое окно «Показать данные»)
+        # загрузка данных с сортировкой и фильтрами (старое окно «Показать данные»)
+
     def load_data(self, filters_param):
         if not self.conn or not self.cur:
             raise RuntimeError("Нет подключения к БД")
 
         try:
-            # базовый запрос
-            query = """
-                SELECT 
-                    s.id, 
-                    c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client, 
-                    r.room_number, 
-                    r.comfort, 
-                    s.check_in, 
-                    s.check_out, 
-                    CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid, 
-                    CASE WHEN s.status  THEN 'Активно' ELSE 'Завершено' END AS status 
-                FROM stays s 
-                JOIN clients c ON s.client_id = c.id 
-                JOIN rooms r  ON s.room_id   = r.id 
-            """
+            # 1. Пытаемся автоматически определить реальные связи stays.client_id / stays.room_id
 
-            # соответствие столбцов
+            client_ref_table = "clients"
+            client_ref_col = "id"
+            room_ref_table = "rooms"
+            room_ref_col = "id"
+
+            try:
+                # смотрим структуру stays и её внешние ключи
+                cols_stays = self.get_table_columns("public", "stays")
+                by_name = {c["name"]: c for c in cols_stays}
+
+                # --- client_id ---
+                if "client_id" in by_name and by_name["client_id"]["fk"]:
+                    fk = by_name["client_id"]["fk"][0]
+                    client_ref_table = fk["ref_table"]
+                    client_ref_col = fk["ref_columns"][0]
+                else:
+                    # fk нет или он странный — смотрим PK таблицы clients (или того, что указано в client_ref_table)
+                    try:
+                        cols_clients = self.get_table_columns("public", client_ref_table)
+                        pk_cols = [c["name"] for c in cols_clients if c.get("is_pk")]
+                        if pk_cols:
+                            client_ref_col = pk_cols[0]
+                    except Exception as e2:
+                        self.log.addError("Не удалось определить PK для clients: " + str(e2))
+
+                # --- room_id ---
+                if "room_id" in by_name and by_name["room_id"]["fk"]:
+                    fk = by_name["room_id"]["fk"][0]
+                    room_ref_table = fk["ref_table"]
+                    room_ref_col = fk["ref_columns"][0]
+                else:
+                    # fk нет или он странный — ищем PK в rooms
+                    try:
+                        cols_rooms = self.get_table_columns("public", room_ref_table)
+                        pk_cols = [c["name"] for c in cols_rooms if c.get("is_pk")]
+                        if pk_cols:
+                            room_ref_col = pk_cols[0]
+                    except Exception as e2:
+                        self.log.addError("Не удалось определить PK для rooms: " + str(e2))
+
+            except Exception as e:
+                # если вообще ничего не получилось — остаются дефолты (clients.id, rooms.id)
+                self.log.addError(
+                    "Не удалось автоматически определить внешние ключи для stays: " + str(e)
+                )
+
+            # 2. Базовый запрос с учётом найденных таблиц и полей
+            query = f"""
+                   SELECT 
+                       s.id, 
+                       c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client, 
+                       r.room_number, 
+                       r.comfort, 
+                       s.check_in, 
+                       s.check_out, 
+                       CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid, 
+                       CASE WHEN s.status  THEN 'Активно' ELSE 'Завершено' END AS status 
+                   FROM stays s 
+                   JOIN "{client_ref_table}" c ON s.client_id = c."{client_ref_col}"
+                   JOIN "{room_ref_table}"  r ON s.room_id   = r."{room_ref_col}"
+               """
+
+            # соответствие столбцов (для сортировки)
             column_mapping = {
                 "ID": "s.id",
                 "Клиент": "client",
@@ -314,9 +363,9 @@ class HotelDB:
             }
 
             # сортировка
-            if isinstance(filters_param, dict) and filters_param["use_sort"]:
-                selected_column = filters_param["sort_column"]
-                selected_sort = filters_param["sort_order"]
+            if isinstance(filters_param, dict) and filters_param.get("use_sort"):
+                selected_column = filters_param.get("sort_column")
+                selected_sort = filters_param.get("sort_order")
             else:
                 selected_column = "ID"
                 selected_sort = "по возрастанию"
@@ -327,31 +376,35 @@ class HotelDB:
             where_conditions = []
 
             # фильтр по дате
-            if isinstance(filters_param, dict) and filters_param["use_date"]:
+            if isinstance(filters_param, dict) and filters_param.get("use_date"):
                 date_from = filters_param.get("date_from")
                 date_to = filters_param.get("date_to")
-                where_conditions.append(
-                    f"""
-                            (
-                                (s.check_in BETWEEN '{date_from}' AND '{date_to}') OR
-                                (s.check_out BETWEEN '{date_from}' AND '{date_to}') OR
-                                (s.check_in <= '{date_to}' AND s.check_out >= '{date_from}')
-                            )
-                            """
-                )
+                if date_from and date_to:
+                    where_conditions.append(
+                        f"""
+                           (
+                               (s.check_in BETWEEN '{date_from}' AND '{date_to}') OR
+                               (s.check_out BETWEEN '{date_from}' AND '{date_to}') OR
+                               (s.check_in <= '{date_to}' AND s.check_out >= '{date_from}')
+                           )
+                           """
+                    )
 
             # фильтр по комфорту
-            if isinstance(filters_param, dict) and filters_param["use_comfort"]:
-                comfort_filter = filters_param["comfort_level"]
-                where_conditions.append(f"r.comfort = '{comfort_filter}'")
+            if isinstance(filters_param, dict) and filters_param.get("use_comfort"):
+                comfort_filter = filters_param.get("comfort_level")
+                if comfort_filter:
+                    where_conditions.append(f"r.comfort = '{comfort_filter}'")
 
             # фильтр по оплате
-            if isinstance(filters_param, dict) and filters_param["use_paid"]:
-                case_paid = filters_param["is_paid"]
-                where_conditions.append(f"s.is_paid = '{case_paid}'")
+            if isinstance(filters_param, dict) and filters_param.get("use_paid"):
+                case_paid = filters_param.get("is_paid")
+                if case_paid is not None:
+                    where_conditions.append(f"s.is_paid = '{case_paid}'")
 
             if where_conditions:
                 query += " WHERE " + " AND ".join(where_conditions)
+
             query += f" ORDER BY {sort_column} {sort_direction}"
 
             self.cur.execute(query)
@@ -361,7 +414,6 @@ class HotelDB:
         except Exception as e:
             self.log.addError("Ошибка при загрузке данных из БД: " + str(e))
             raise RuntimeError("Ошибка при загрузке данных из БД: " + self._friendly_db_error(e))
-
     # ====== НОВОЕ ДЛЯ КР2 / КР3 ======
 
     # универсальный SELECT для разных окон

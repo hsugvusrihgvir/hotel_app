@@ -4,106 +4,107 @@ from PySide6.QtWidgets import (
     QLabel, QComboBox, QLineEdit, QCheckBox,
     QScrollArea, QWidget
 )
-from PySide6.QtCore import Qt, qWarning
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from app.ui.filters_window import FilterWindow
 
 
 class DataWindow(QDialog):
+    """
+    Окно вывода данных о бронированиях.
+    Содержит:
+      - стандартную сводную таблицу по бронированиям (JOIN stays/clients/rooms),
+      - простые фильтры (дата/комфорт/оплата),
+      - расширенный конструктор SELECT (AdvancedSelectDialog).
+    """
+
     def __init__(self, parent=None, db=None):
-        super().__init__(parent)  # вызов конструктора родительского класса
-        self.setWindowTitle("Данные о бронированиях")  # установка заголовка окна
-        self.setModal(True)  # делаем окно модальным (блокирует родительское)
-        self.setMinimumSize(900, 500)  # установка минимального размера окна
+        super().__init__(parent)
+        self.setWindowTitle("Данные о бронированиях")
+        self.setModal(True)
+        self.setMinimumSize(900, 500)
 
-        # добавление стиля основного окна
         self.setStyleSheet("""
-                    QDialog { 
-                        background: #171a1d; 
-                        color: #e8e6e3; 
-                    }
-                    QTableView { 
-                        background: #242a30; 
-                        color: #e8e6e3;
-                        border: 1px solid #323a42;
-                        gridline-color: #323a42;
-                        outline: 0;
-                    }
-                    QTableView::item:hover { 
-                        background: #2b3238; 
-                        selection-background-color: #2b3238;
-                    }
-                    QHeaderView::section { 
-                        background: #20252a; 
-                        color: #e8e6e3;
-                        border: 1px solid #323a42;
-                        padding: 8px;
-                    }
-                    QPushButton { 
-                        background: #242a30; 
-                        color: #e8e6e3;
-                        border: 1px solid #323a42;
-                        padding: 8px 16px;
-                        border-radius: 5px;
-                    }
-                    QPushButton:hover { 
-                        background: #2b3238; 
-                    }
-                """)
-
-        self.setup_ui()
+            QDialog {
+                background: #171a1d;
+                color: #e8e6e3;
+            }
+            QTableView {
+                background: #242a30;
+                color: #e8e6e3;
+                border: 1px solid #323a42;
+                gridline-color: #323a42;
+                outline: 0;
+            }
+            QTableView::item:hover {
+                background: #2b3238;
+                selection-background-color: #2b3238;
+            }
+            QHeaderView::section {
+                background: #20252a;
+                color: #e8e6e3;
+                border: 1px solid #323a42;
+                padding: 8px;
+            }
+            QPushButton {
+                background: #242a30;
+                color: #e8e6e3;
+                border: 1px solid #323a42;
+                padding: 8px 16px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background: #2b3238;
+            }
+        """)
 
         if db is None:
             raise RuntimeError("Ошибка. Нет подключения к БД. Откройте сначала соединение.")
         self.db = db
 
+        self._setup_ui()
         self.update_table()
 
-    def setup_ui(self):
-        layout = QVBoxLayout(self)  # создание вертикального layout
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
 
-        # таблица для отображения данных
+        # таблица
         self.table_view = QTableView()
-        self.model = QStandardItemModel()  # модель данных для таблицы
-        self.table_view.setModel(self.model)  # связываем модель с таблицей
-        self.table_view.verticalHeader().setVisible(False)  # убираем счёт строк (есть id)
-        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)  # выделение всей строки
-        layout.addWidget(self.table_view)  # добавляем таблицу в layout
+        self.model = QStandardItemModel()
+        self.table_view.setModel(self.model)
+        self.table_view.verticalHeader().setVisible(False)
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        layout.addWidget(self.table_view)
 
-        # layout для кнопок
-        buttons_layout = QHBoxLayout()
-
-        # кнопка обновления данных
+        # кнопки
+        btns = QHBoxLayout()
         self.btn_update = QPushButton("Обновить")
-        self.btn_update.clicked.connect(self.update_table)  # подключение сигнала к слоту
+        self.btn_update.clicked.connect(self.update_table)
 
-        # кнопка фильтров (простые фильтры по дате/комфорту/оплате)
         self.btn_filter = QPushButton("Фильтры")
-        self.btn_filter.clicked.connect(self.filter_button)  # открытие окна с фильтрами
+        self.btn_filter.clicked.connect(self.filter_button)
 
-        # кнопка расширенного запроса (SELECT с WHERE/GROUP BY/HAVING/ORDER BY)
         self.btn_advanced = QPushButton("Расширенный запрос…")
         self.btn_advanced.clicked.connect(self.open_advanced_query)
 
-        # кнопка закрытия окна
         self.btn_close = QPushButton("Закрыть")
-        self.btn_close.clicked.connect(self.close)  # подключение сигнала к слоту
+        self.btn_close.clicked.connect(self.close)
 
-        buttons_layout.addWidget(self.btn_update)   # добавление кнопки обновления
-        buttons_layout.addWidget(self.btn_filter)   # рядом с "Обновить", фильтры
-        buttons_layout.addWidget(self.btn_advanced) # кнопка конструктора запросов
-        buttons_layout.addStretch()                 # добавляем растягивающееся пространство
-        buttons_layout.addWidget(self.btn_close)    # добавление кнопки закрытия
+        btns.addWidget(self.btn_update)
+        btns.addWidget(self.btn_filter)
+        btns.addWidget(self.btn_advanced)
+        btns.addStretch()
+        btns.addWidget(self.btn_close)
 
-        layout.addLayout(buttons_layout)  # добавление layout с кнопками в основной layout
+        layout.addLayout(btns)
 
     def update_table(self, filter_params=None):
-        """Загрузка стандартной сводной таблицы с простыми фильтрами."""
-        self.model.clear()  # очистка модели данных
-        data = None
-
-        # заголовки столбцов таблицы
+        """
+        Стандартная сводная таблица по stays/clients/rooms
+        с поддержкой простых фильтров (окон FilterWindow).
+        """
+        self.model.clear()
         headers = [
             "ID",
             "Клиент",
@@ -116,31 +117,10 @@ class DataWindow(QDialog):
         ]
 
         try:
-            data = self.db.load_data(filter_params)
-        except RuntimeError:
-            # пробрасываем дальше — верхний уровень уже покажет понятное сообщение
-            raise
-
-        if not data:  # проверка на наличие данных
-            self.model.setHorizontalHeaderLabels(["Нет данных"])  # заголовок если данных нет
+            rows = self.db.load_data(filter_params)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", str(e))
             return
-
-        self.model.setHorizontalHeaderLabels(headers)  # установка заголовков
-
-        # заполнение таблицы данными
-        for row in data:
-            items = [QStandardItem(str(value)) for value in row]  # создание элементов для каждой ячейки
-            self.model.appendRow(items)  # добавление строки в модель
-
-        # автоматическое растягивание столбцов под содержимое
-        self.table_view.resizeColumnsToContents()
-
-    def show_custom_data(self, headers, rows):
-        """
-        Показ данных, полученных из расширенного конструктора SELECT.
-        Используется AdvancedSelectDialog.
-        """
-        self.model.clear()
 
         if not rows:
             self.model.setHorizontalHeaderLabels(["Нет данных"])
@@ -148,7 +128,23 @@ class DataWindow(QDialog):
 
         self.model.setHorizontalHeaderLabels(headers)
         for row in rows:
-            items = [QStandardItem(str(value)) for value in row]
+            items = [QStandardItem(str(v)) for v in row]
+            self.model.appendRow(items)
+
+        self.table_view.resizeColumnsToContents()
+
+    def show_custom_data(self, headers, rows):
+        """
+        Показ результата расширенного SELECT.
+        """
+        self.model.clear()
+        if not rows:
+            self.model.setHorizontalHeaderLabels(["Нет данных"])
+            return
+
+        self.model.setHorizontalHeaderLabels(headers)
+        for row in rows:
+            items = [QStandardItem(str(v)) for v in row]
             self.model.appendRow(items)
 
         self.table_view.resizeColumnsToContents()
@@ -156,51 +152,51 @@ class DataWindow(QDialog):
     def filter_button(self):
         """Открытие окна простых фильтров."""
         try:
-            filter_window = FilterWindow(self, self.db)  # создается и показывается модальное окно
-            filter_window.filterApplied.connect(self.handle_filter)
-            filter_window.exec_()  # блок родительского окна до закрытия
+            fw = FilterWindow(self, self.db)
+            fw.filterApplied.connect(self.handle_filter)
+            fw.exec()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка открытия фильтра: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка открытия фильтра: {e}")
 
-    def handle_filter(self, filter_params):
-        """Применение фильтрации из окна фильтров."""
-        try:
-            # обновляем таблицу с учетом фильтрации
-            self.update_table(filter_params)
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка применения фильтра: {str(e)}")
+    def handle_filter(self, params):
+        """Применение фильтров из FilterWindow."""
+        self.update_table(params)
 
     def open_advanced_query(self):
-        """Открывает модальный конструктор расширенных SELECT-запросов."""
+        """Открытие конструктора расширенных SELECT-запросов."""
         try:
             dlg = AdvancedSelectDialog(self, self.db)
-            dlg.exec_()
+            dlg.exec()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка открытия расширенного запроса: {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка открытия расширенного запроса: {e}")
 
 
 class AdvancedSelectDialog(QDialog):
     """
-    Модальное окно для построения расширенного SELECT:
-    - выбор столбцов для вывода
-    - одно условие WHERE (в т.ч. LIKE / регулярные выражения)
-    - ORDER BY
-    - GROUP BY + агрегатные функции + HAVING
-    Всё без ручного ввода SQL.
+    Конструктор расширенного SELECT, который работает
+    с АКТУАЛЬНОЙ схемой БД.
+
+    Логика:
+      1) Пользователь выбирает таблицу из существующих (list_tables()).
+      2) Для выбранной таблицы подгружаются поля и их типы через get_table_columns.
+      3) На основе типов:
+         - формируется список выводимых столбцов (чекбоксы);
+         - формируются списки столбцов для WHERE / ORDER BY / GROUP BY / HAVING;
+         - подбираются допустимые операторы (для текста/чисел/дат/boolean).
     """
 
     def __init__(self, parent=None, db=None):
         super().__init__(parent)
-        self.parent_window: DataWindow = parent
-        self.db = db
-        if self.db is None:
+
+        if db is None:
             raise RuntimeError("Нет подключения к БД.")
+        self.db = db
+        self.parent_window: DataWindow = parent  # тип подсказка
 
         self.setWindowTitle("Расширенный запрос (SELECT)")
         self.setModal(True)
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(850, 650)
 
-        # тёмный стиль в том же духе
         self.setStyleSheet("""
             QDialog {
                 background: #171a1d;
@@ -216,9 +212,7 @@ class AdvancedSelectDialog(QDialog):
                 left: 10px;
                 padding: 0 4px;
             }
-            QLabel {
-                color: #e8e6e3;
-            }
+            QLabel { color: #e8e6e3; }
             QLineEdit, QComboBox {
                 background: #242a30;
                 color: #e8e6e3;
@@ -233,52 +227,123 @@ class AdvancedSelectDialog(QDialog):
                 padding: 8px 16px;
                 border-radius: 5px;
             }
-            QPushButton:hover {
-                background: #2b3238;
-            }
-            QCheckBox {
-                spacing: 6px;
-            }
+            QPushButton:hover { background: #2b3238; }
+            QCheckBox { spacing: 6px; }
         """)
 
-        self._init_mappings()
+        # текущее описание полей таблицы
+        self.columns = []        # список словарей с метаданными поля
+        self.col_checks = {}     # чекбоксы вывода
+        self.tables = []         # список доступных таблиц
+
+        self._load_tables()
         self._build_ui()
 
-    def _init_mappings(self):
-        """Соответствие логических полей заголовкам и SQL-именам."""
-        # колонки из базовой сводной выборки по бронированиям
-        self.columns = [
-            ("id", "ID", "stay_id"),
-            ("client", "Клиент", "client"),
-            ("room_number", "Номер", "room_number"),
-            ("comfort", "Комфорт", "comfort"),
-            ("check_in", "Заезд", "check_in"),
-            ("check_out", "Выезд", "check_out"),
-            ("paid", "Оплата", "paid"),
-            ("status", "Статус", "status"),
-        ]
+        # сразу загрузим колонки для первой таблицы (если она есть)
+        if self.tables:
+            self.cb_table.setCurrentIndex(0)
+            self._load_columns_for_table(self.cb_table.currentData())
 
-        # базовый подзапрос по всем заселениям
-        self.base_subquery = """
-            SELECT 
-                s.id AS stay_id,
-                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
-                r.room_number AS room_number,
-                r.comfort AS comfort,
-                s.check_in AS check_in,
-                s.check_out AS check_out,
-                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
-                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
-            FROM stays s
-            JOIN clients c ON s.client_id = c.id
-            JOIN rooms   r ON s.room_id   = r.id
+    # ====== МЕТАДАННЫЕ БД ======
+
+    def _load_tables(self):
+        """Считываем список таблиц схемы public."""
+        try:
+            self.tables = self.db.list_tables()
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось получить список таблиц: {e}")
+            self.tables = []
+
+    def _categorize_type(self, type_str: str) -> str:
         """
+        Грубое определение категории типа:
+          - text:  text, varchar, char, ...
+          - number: int, numeric, real, double
+          - date: date, time, timestamp
+          - bool: bool
+          - other: всё остальное (enum, массивы и т.п.)
+        """
+        if type_str is None:
+            return "other"
+        t = type_str.lower()
+        if "char" in t or "text" in t:
+            return "text"
+        if "int" in t or "numeric" in t or "real" in t or "double" in t:
+            return "number"
+        if "date" in t or "time" in t:
+            return "date"
+        if "bool" in t:
+            return "bool"
+        return "other"
+
+    def _load_columns_for_table(self, table_name: str | None):
+        """Загружаем список полей и типов для выбранной таблицы и перестраиваем UI."""
+        self.columns = []
+        self.col_checks.clear()
+
+        # чистим динамические элементы (чекбоксы, комбобоксы по столбцам)
+        # колонки будут добавлены заново
+        for i in reversed(range(self.cols_layout.count())):
+            w = self.cols_layout.itemAt(i).widget()
+            if w is not None:
+                w.setParent(None)
+
+        self.cb_where_col.clear()
+        self.cb_where_col.addItem("— нет —", None)
+
+        self.cb_order_col.clear()
+        self.cb_group_col.clear()
+        self.cb_agg_col.clear()
+
+        if not table_name:
+            return
+
+        # получаем структуру таблицы
+        try:
+            cols = self.db.get_table_columns("public", table_name)
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось получить столбцы таблицы {table_name}: {e}")
+            return
+
+        # формируем внутреннее описание колонок
+        for c in cols:
+            name = c["name"]
+            tstr = c["type"]
+            cat = self._categorize_type(tstr)
+            self.columns.append(
+                {
+                    "name": name,      # имя колонки в таблице
+                    "sql": name,       # имя для SQL (t.name)
+                    "title": name,     # подпись в интерфейсе
+                    "type": tstr,
+                    "category": cat,
+                }
+            )
+
+        # строим чекбоксы вывода и заполняем комбобоксы
+        for col in self.columns:
+            title = col["title"]
+            key = col["name"]
+
+            cb = QCheckBox(title)
+            cb.setChecked(True)
+            self.col_checks[key] = cb
+            self.cols_layout.addWidget(cb)
+
+            self.cb_where_col.addItem(title, key)
+            self.cb_order_col.addItem(title, key)
+            self.cb_group_col.addItem(title, key)
+            self.cb_agg_col.addItem(title, key)
+
+        # обновляем набор операторов для WHERE при смене колонки
+        self._update_where_operators()
+
+    # ====== UI ======
 
     def _build_ui(self):
-        # === Основной layout диалога ===
         main_layout = QVBoxLayout(self)
 
-        # === ScrollArea для всего содержимого ===
+        # ScrollArea для содержимого
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("border: none;")
@@ -287,39 +352,35 @@ class AdvancedSelectDialog(QDialog):
         container_layout = QVBoxLayout(container)
         container_layout.setAlignment(Qt.AlignTop)
 
-        # === 1. Выводимые столбцы ===
+        # ---- 0. Выбор таблицы ----
+        gb_table = QGroupBox("Таблица")
+        table_layout = QFormLayout(gb_table)
+        self.cb_table = QComboBox()
+        for t in self.tables:
+            self.cb_table.addItem(t, t)
+        self.cb_table.currentIndexChanged.connect(self._on_table_changed)
+        table_layout.addRow("Таблица:", self.cb_table)
+        container_layout.addWidget(gb_table)
+
+        # ---- 1. Выводимые столбцы ----
         gb_cols = QGroupBox("Выводимые столбцы")
-        cols_layout = QVBoxLayout(gb_cols)
-        self.col_checks = {}
-        for key, title, sql_name in self.columns:
-            cb = QCheckBox(title)
-            cb.setChecked(True)
-            self.col_checks[key] = cb
-            cols_layout.addWidget(cb)
+        self.cols_layout = QVBoxLayout(gb_cols)
         container_layout.addWidget(gb_cols)
 
-        # === 2. WHERE ===
+        # ---- 2. WHERE / LIKE / регулярки ----
         gb_where = QGroupBox("Условие отбора (WHERE, LIKE, регулярные выражения)")
         where_layout = QFormLayout(gb_where)
 
         self.cb_where_col = QComboBox()
         self.cb_where_col.addItem("— нет —", None)
-        for key, title, sql_name in self.columns:
-            self.cb_where_col.addItem(title, key)
+        self.cb_where_col.currentIndexChanged.connect(self._update_where_operators)
 
         self.cb_where_op = QComboBox()
-        self.cb_where_op.addItems([
-            "=", "!=", ">", "<", ">=", "<=",
-            "BETWEEN",
-            "LIKE", "ILIKE",
-            "~", "~*", "!~", "!~*"
-        ])
-
         self.ed_where_val1 = QLineEdit()
         self.ed_where_val2 = QLineEdit()
         self.ed_where_val2.setEnabled(False)
 
-        self.cb_where_op.currentTextChanged.connect(self._update_between_state)
+        self.cb_where_op.currentTextChanged.connect(self._on_where_op_changed)
 
         where_layout.addRow("Столбец:", self.cb_where_col)
         where_layout.addRow("Оператор:", self.cb_where_op)
@@ -328,15 +389,12 @@ class AdvancedSelectDialog(QDialog):
 
         container_layout.addWidget(gb_where)
 
-        # === 3. ORDER BY ===
+        # ---- 3. ORDER BY ----
         gb_order = QGroupBox("Сортировка (ORDER BY)")
         order_layout = QFormLayout(gb_order)
 
         self.chk_use_order = QCheckBox("Использовать сортировку")
         self.cb_order_col = QComboBox()
-        for key, title, sql_name in self.columns:
-            self.cb_order_col.addItem(title, key)
-
         self.cb_order_dir = QComboBox()
         self.cb_order_dir.addItems(["по возрастанию", "по убыванию"])
 
@@ -346,29 +404,23 @@ class AdvancedSelectDialog(QDialog):
 
         container_layout.addWidget(gb_order)
 
-        # === 4. GROUP BY / HAVING ===
+        # ---- 4. GROUP BY / HAVING ----
         gb_group = QGroupBox("Группировка и агрегаты (GROUP BY / HAVING)")
         group_layout = QFormLayout(gb_group)
 
         self.chk_use_group = QCheckBox("Включить группировку")
-        self.cb_group_col = QComboBox()
-        for key, title, sql_name in self.columns:
-            self.cb_group_col.addItem(title, key)
 
+        self.cb_group_col = QComboBox()
         self.cb_agg_func = QComboBox()
         self.cb_agg_func.addItems(["(нет)", "COUNT", "SUM", "AVG", "MIN", "MAX"])
-
         self.cb_agg_col = QComboBox()
-        for key, title, sql_name in self.columns:
-            self.cb_agg_col.addItem(title, key)
 
         self.cb_having_op = QComboBox()
         self.cb_having_op.addItems([">", ">=", "<", "<=", "=", "!="])
-
         self.ed_having_val = QLineEdit()
 
-        self._update_group_enabled(False)
         self.chk_use_group.toggled.connect(self._update_group_enabled)
+        self._update_group_enabled(False)
 
         group_layout.addRow(self.chk_use_group)
         group_layout.addRow("Группировать по:", self.cb_group_col)
@@ -379,11 +431,11 @@ class AdvancedSelectDialog(QDialog):
 
         container_layout.addWidget(gb_group)
 
-        # === Добавляем основной контейнер в Scroll ===
+        # Вставляем контейнер в скролл
         scroll.setWidget(container)
         main_layout.addWidget(scroll)
 
-        # === Кнопки снизу ===
+        # ---- Кнопки ----
         btns = QHBoxLayout()
         btns.addStretch()
         self.btn_run = QPushButton("Выполнить")
@@ -395,157 +447,166 @@ class AdvancedSelectDialog(QDialog):
 
         main_layout.addLayout(btns)
 
-    def _update_between_state(self, op_text: str):
-        """Включение/выключение второго значения для BETWEEN."""
-        self.ed_where_val2.setEnabled(op_text == "BETWEEN")
+    # ====== HELPERS ДЛЯ UI ======
+
+    def _on_table_changed(self, idx: int):
+        table_name = self.cb_table.itemData(idx)
+        self._load_columns_for_table(table_name)
+
+    def _on_where_op_changed(self, text: str):
+        self.ed_where_val2.setEnabled(text == "BETWEEN")
 
     def _update_group_enabled(self, enabled: bool):
-        """Включение/выключение элементов группировки."""
         self.cb_group_col.setEnabled(enabled)
         self.cb_agg_func.setEnabled(enabled)
         self.cb_agg_col.setEnabled(enabled)
         self.cb_having_op.setEnabled(enabled)
         self.ed_having_val.setEnabled(enabled)
 
-    def _get_sql_name(self, key: str) -> str:
-        for k, title, sql_name in self.columns:
-            if k == key:
-                return sql_name
-        return key
+    def _find_col(self, name: str):
+        for c in self.columns:
+            if c["name"] == name:
+                return c
+        return None
 
-    def _get_title(self, key: str) -> str:
-        for k, title, sql_name in self.columns:
-            if k == key:
-                return title
-        return key
+    def _update_where_operators(self):
+        """
+        Выбор набора операторов в зависимости от типа столбца.
+        """
+        self.cb_where_op.clear()
+        col_name = self.cb_where_col.currentData()
+        if col_name is None:
+            # ничего не выбрано
+            self.cb_where_op.addItem("=")
+            self.cb_where_op.addItem("!=")
+            self.cb_where_op.addItem("IS NULL")
+            self.cb_where_op.addItem("IS NOT NULL")
+            return
+
+        col = self._find_col(col_name)
+        cat = col["category"] if col else "other"
+
+        # базовые операторы
+        ops = ["=", "!="]
+
+        if cat in ("number", "date"):
+            ops += [">", "<", ">=", "<=", "BETWEEN"]
+        if cat == "text":
+            ops += ["LIKE", "ILIKE", "~", "~*", "!~", "!~*"]
+        # для любых типов доступны проверки на NULL
+        ops += ["IS NULL", "IS NOT NULL"]
+
+        for op in ops:
+            self.cb_where_op.addItem(op)
+
+        # BETWEEN управляет вторым значением
+        self.ed_where_val2.setEnabled(self.cb_where_op.currentText() == "BETWEEN")
+
+    # ====== ПОСТРОЕНИЕ И ВЫПОЛНЕНИЕ ЗАПРОСА ======
 
     def _run_query(self):
-        """Собирает запрос по выбранным настройкам и выполняет его через db.run_select."""
-        # --- SELECT ---
-        use_group = self.chk_use_group.isChecked()
+        table_name = self.cb_table.currentData()
+        if not table_name:
+            QMessageBox.warning(self, "Предупреждение", "Выберите таблицу.")
+            return
 
+        # SELECT
+        use_group = self.chk_use_group.isChecked()
         select_parts = []
         headers = []
 
         if use_group:
-            # При группировке делаем простой и понятный вывод:
-            #   - столбец группировки
-            #   - при необходимости агрегат по выбранной колонке
-            group_key = self.cb_group_col.currentData()
-            group_sql = self._get_sql_name(group_key)
-            group_title = self._get_title(group_key)
-
-            select_parts.append(f"t.{group_sql}")
-            headers.append(group_title)
+            group_col_name = self.cb_group_col.currentData()
+            if group_col_name is None:
+                QMessageBox.warning(self, "Предупреждение", "Выберите столбец для группировки.")
+                return
+            select_parts.append(f"t.\"{group_col_name}\"")
+            headers.append(group_col_name)
 
             agg_func = self.cb_agg_func.currentText()
-            agg_col_key = self.cb_agg_col.currentData()
-            agg_col_sql = self._get_sql_name(agg_col_key)
-            agg_col_title = self._get_title(agg_col_key)
-
-            agg_expr = None
-            agg_header = None
-
-            if agg_func != "(нет)":
-                if agg_func == "COUNT":
-                    # COUNT всегда допустим, можно считать по любой колонке
-                    agg_expr = f"COUNT(t.{agg_col_sql})"
-                else:
-                    agg_expr = f"{agg_func}(t.{agg_col_sql})"
-                agg_header = f"{agg_func}({agg_col_title})"
+            agg_col_name = self.cb_agg_col.currentData()
+            if agg_func != "(нет)" and agg_col_name is not None:
+                agg_expr = f"{agg_func}(t.\"{agg_col_name}\")"
                 select_parts.append(f"{agg_expr} AS agg_value")
-                headers.append(agg_header or "Агрегат")
+                headers.append(f"{agg_func}({agg_col_name})")
         else:
-            # Без группировки используем галочки "Выводимые столбцы"
-            for key, cb in self.col_checks.items():
+            # выводимые столбцы по чекбоксам
+            for name, cb in self.col_checks.items():
                 if cb.isChecked():
-                    sql_name = self._get_sql_name(key)
-                    select_parts.append(f"t.{sql_name}")
-                    headers.append(self._get_title(key))
+                    select_parts.append(f"t.\"{name}\"")
+                    headers.append(name)
 
             if not select_parts:
                 QMessageBox.warning(self, "Предупреждение", "Выберите хотя бы один столбец для вывода.")
                 return
 
-        # --- FROM ---
-        query = "SELECT " + ", ".join(select_parts) + " FROM (\n" + self.base_subquery + "\n) t"
-
+        query = "SELECT " + ", ".join(select_parts) + f" FROM \"{table_name}\" t"
         params = []
+        # WHERE
         where_clauses = []
 
-        # --- WHERE / LIKE / рег. выражения ---
-        where_key = self.cb_where_col.currentData()
-        if where_key is not None:
-            col_sql = self._get_sql_name(where_key)
-            op = self.cb_where_op.currentText()
+        col_name = self.cb_where_col.currentData()
+        op = self.cb_where_op.currentText()
+
+        if col_name is not None and op:
+            col = self._find_col(col_name)
+            cat = col["category"] if col else "other"
+
             v1 = self.ed_where_val1.text().strip()
             v2 = self.ed_where_val2.text().strip()
 
-            if not v1:
-                QMessageBox.warning(self, "Предупреждение", "Введите значение для условия.")
-                return
-
-            if op == "BETWEEN":
-                if not v2:
-                    QMessageBox.warning(self, "Предупреждение", "Для BETWEEN нужно указать два значения.")
+            if op in ("IS NULL", "IS NOT NULL"):
+                where_clauses.append(f"t.\"{col_name}\" {op}")
+            elif op == "BETWEEN":
+                if not v1 or not v2:
+                    QMessageBox.warning(self, "Предупреждение", "Для BETWEEN укажите два значения.")
                     return
-                where_clauses.append(f"t.{col_sql} BETWEEN %s AND %s")
-                params.append(v1)
-                params.append(v2)
+                where_clauses.append(f"t.\"{col_name}\" BETWEEN %s AND %s")
+                params.extend([v1, v2])
             else:
-                # LIKE / ILIKE / ~ / ~* / !~ / !~* и обычные сравнения
-                where_clauses.append(f"t.{col_sql} {op} %s")
+                if not v1:
+                    QMessageBox.warning(self, "Предупреждение", "Укажите значение для условия.")
+                    return
+                where_clauses.append(f"t.\"{col_name}\" {op} %s")
                 params.append(v1)
 
         if where_clauses:
             query += " WHERE " + " AND ".join(where_clauses)
 
-        # --- GROUP BY / HAVING ---
+        # GROUP BY / HAVING
         if use_group:
-            group_key = self.cb_group_col.currentData()
-            group_sql = self._get_sql_name(group_key)
-            query += f" GROUP BY t.{group_sql}"
+            group_col_name = self.cb_group_col.currentData()
+            query += f" GROUP BY t.\"{group_col_name}\""
 
-            # HAVING по агрегату (если он включён)
             agg_func = self.cb_agg_func.currentText()
             having_val = self.ed_having_val.text().strip()
-            if agg_func != "(нет)" and having_val:
-                agg_col_key = self.cb_agg_col.currentData()
-                agg_col_sql = self._get_sql_name(agg_col_key)
+            agg_col_name = self.cb_agg_col.currentData()
 
-                if agg_func == "COUNT":
-                    agg_expr = f"COUNT(t.{agg_col_sql})"
-                else:
-                    agg_expr = f"{agg_func}(t.{agg_col_sql})"
-
+            if agg_func != "(нет)" and having_val and agg_col_name is not None:
+                agg_expr = f"{agg_func}(t.\"{agg_col_name}\")"
                 having_op = self.cb_having_op.currentText()
                 query += f" HAVING {agg_expr} {having_op} %s"
                 params.append(having_val)
 
-        # --- ORDER BY ---
+        # ORDER BY
         if self.chk_use_order.isChecked():
-            order_key = self.cb_order_col.currentData()
-            order_sql = self._get_sql_name(order_key)
-            order_dir = "ASC" if self.cb_order_dir.currentText() == "по возрастанию" else "DESC"
-            query += f" ORDER BY t.{order_sql} {order_dir}"
+            order_col_name = self.cb_order_col.currentData()
+            if order_col_name is not None:
+                order_dir = "ASC" if self.cb_order_dir.currentText() == "по возрастанию" else "DESC"
+                query += f" ORDER BY t.\"{order_col_name}\" {order_dir}"
 
-        # --- Выполнение запроса ---
+        # выполнение
         try:
             rows = self.db.run_select(query, tuple(params))
-        except RuntimeError as e:
+        except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))
             return
 
         if not rows:
             QMessageBox.information(self, "Результат", "По заданным условиям данные не найдены.")
-            # всё равно очищаем таблицу и показываем заголовки
-            if self.parent_window is not None:
-                self.parent_window.show_custom_data(headers or ["Нет данных"], [])
+            self.parent_window.show_custom_data(headers or ["Нет данных"], [])
             self.accept()
             return
 
-        # передаём результат в основное окно
-        if self.parent_window is not None:
-            self.parent_window.show_custom_data(headers, rows)
-
+        self.parent_window.show_custom_data(headers, rows)
         self.accept()

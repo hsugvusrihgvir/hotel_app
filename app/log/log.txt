@@ -185,3 +185,421 @@ LINE 2: ...NTO rooms (room_number, capacity, comfort, price, amenities)
 [2025-09-26 20:59:44.875500] INFO: Подключение к hotel_db успешно
 [2025-09-26 21:00:00.486773] INFO: Закрытие подключения к БД...
 [2025-09-26 21:00:00.486949] INFO: Подключение к БД закрыто
+[2025-11-13 10:15:36.173262] INFO: Подключение к БД hotel_db...
+[2025-11-13 10:16:31.999347] INFO: Подключение к БД hotel_db...
+[2025-11-13 10:16:33.730824] INFO: Подключение к БД прошло успешно.
+[2025-11-13 10:21:07.646575] INFO: Проверка подключения к БД...
+[2025-11-13 10:21:07.647545] INFO: Создание схемы БД...
+[2025-11-13 10:21:07.757974] INFO: Схема БД создана
+[2025-11-13 10:21:08.853732] INFO: Создание схемы прошло успешно
+[2025-11-13 10:28:55.879356] INFO: Подключение к БД hotel_db...
+[2025-11-13 10:28:57.919500] INFO: Подключение к БД прошло успешно.
+[2025-11-13 10:28:58.893908] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 10:28:59.083154] INFO: Столбцов найдено: 8
+[2025-11-13 10:28:59.084615] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 10:28:59.125311] INFO: Столбцов найдено: 8
+[2025-11-13 10:28:59.126508] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 10:28:59.167903] INFO: Столбцов найдено: 8
+[2025-11-13 10:28:59.169103] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 10:28:59.213091] INFO: Столбцов найдено: 8
+[2025-11-13 11:09:24.048024] INFO: Подключение к БД hotel_db...
+[2025-11-13 11:09:25.940474] INFO: Подключение к БД прошло успешно.
+[2025-11-13 11:09:27.433750] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 11:09:27.547826] INFO: Столбцов найдено: 8
+[2025-11-13 11:09:27.549659] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 11:09:27.593467] INFO: Столбцов найдено: 8
+[2025-11-13 11:09:27.594824] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 11:09:27.636784] INFO: Столбцов найдено: 8
+[2025-11-13 11:09:27.638135] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 11:09:27.680429] INFO: Столбцов найдено: 8
+[2025-11-13 11:13:34.577778] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 11:13:34.614525] INFO: Столбцов найдено: 6
+[2025-11-13 11:13:37.378003] INFO: Загрузка столбцов таблицы stays...
+[2025-11-13 11:13:37.444748] INFO: Столбцов найдено: 8
+[2025-11-13 11:43:40.719540] INFO: Закрытие подключения к БД...
+[2025-11-13 11:43:40.722656] INFO: Подключение к БД закрыто
+[2025-11-13 12:04:30.507176] ERROR: Ошибка подключения: 'utf-8' codec can't decode byte 0xc2 in position 61: invalid continuation byte
+[2025-11-13 12:04:31.764268] INFO: Подключение к БД прошло успешно.
+[2025-11-13 12:04:36.901789] ERROR: Ошибка при закрытии БД: 'HotelDB' object has no attribute 'close'
+[2025-11-13 12:06:32.403691] ERROR: Ошибка подключения: 'utf-8' codec can't decode byte 0xc2 in position 61: invalid continuation byte
+[2025-11-13 12:06:33.960647] INFO: Подключение к БД прошло успешно.
+[2025-11-13 12:06:40.561978] ERROR: Ошибка при закрытии БД: 'HotelDB' object has no attribute 'close'
+[2025-11-13 16:27:31.102396] INFO: Подключение к БД hotel_db...
+[2025-11-13 16:27:32.680089] INFO: Подключение к БД прошло успешно.
+[2025-11-13 16:27:39.178783] INFO: Проверка подключения к БД...
+[2025-11-13 16:27:39.179460] INFO: Создание схемы БД...
+[2025-11-13 16:27:39.235813] INFO: Схема БД создана
+[2025-11-13 16:27:40.170217] INFO: Создание схемы прошло успешно
+[2025-11-13 16:27:43.170166] INFO: Закрытие подключения к БД...
+[2025-11-13 16:27:43.171061] INFO: Подключение к БД закрыто
+[2025-11-13 16:31:50.488554] INFO: Подключение к БД hotel_db...
+[2025-11-13 16:31:51.812168] INFO: Подключение к БД прошло успешно.
+[2025-11-13 16:31:56.288533] INFO: Закрытие подключения к БД...
+[2025-11-13 16:31:56.289320] INFO: Подключение к БД закрыто
+[2025-11-13 16:34:46.656419] INFO: Подключение к БД hotel_db...
+[2025-11-13 16:34:48.086788] INFO: Подключение к БД прошло успешно.
+[2025-11-13 16:34:49.333152] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 16:34:49.337143] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 16:34:57.996807] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 16:34:58.096898] INFO: Столбцов найдено: 6
+[2025-11-13 16:34:58.100831] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:34:58.129932] INFO: Столбцов найдено: 8
+[2025-11-13 16:34:58.130970] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:34:58.166177] INFO: Столбцов найдено: 8
+[2025-11-13 16:34:58.171469] INFO: UNIQUE-ограничения для rooms: [{'name': 'rooms_room_number_key', 'column': 'room_number'}]
+[2025-11-13 16:34:58.182717] INFO: CHECK-ограничения для rooms: [{'name': '2200_173081_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173081_2_not_null', 'expression': 'room_number IS NOT NULL'}, {'name': '2200_173081_3_not_null', 'expression': 'capacity IS NOT NULL'}, {'name': '2200_173081_4_not_null', 'expression': 'comfort IS NOT NULL'}, {'name': '2200_173081_5_not_null', 'expression': 'price IS NOT NULL'}, {'name': 'rooms_amenities_check', 'expression': '(cardinality(amenities) <= 10)'}, {'name': 'rooms_capacity_check', 'expression': '(capacity > 0)'}, {'name': 'rooms_price_check', 'expression': '(price > (0)::numeric)'}]
+[2025-11-13 16:34:58.194213] INFO: FK-ограничения для rooms: []
+[2025-11-13 16:34:58.457258] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:34:58.490624] INFO: Столбцов найдено: 8
+[2025-11-13 16:34:58.494346] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:34:58.523579] INFO: Столбцов найдено: 8
+[2025-11-13 16:34:58.524477] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:34:58.554334] INFO: Столбцов найдено: 8
+[2025-11-13 16:34:58.559410] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'passport'}]
+[2025-11-13 16:34:58.567217] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'last_name IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'first_name IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'passport IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 16:34:58.578869] INFO: FK-ограничения для clients: []
+[2025-11-13 16:35:00.433382] INFO: Загрузка столбцов таблицы stays...
+[2025-11-13 16:35:00.471369] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:00.474539] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:00.504133] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:00.505029] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:00.534218] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:00.539464] INFO: UNIQUE-ограничения для stays: []
+[2025-11-13 16:35:00.546253] INFO: CHECK-ограничения для stays: [{'name': '2200_173096_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173096_2_not_null', 'expression': 'client_id IS NOT NULL'}, {'name': '2200_173096_3_not_null', 'expression': 'room_id IS NOT NULL'}, {'name': '2200_173096_4_not_null', 'expression': 'check_in IS NOT NULL'}, {'name': '2200_173096_5_not_null', 'expression': 'check_out IS NOT NULL'}, {'name': '2200_173096_6_not_null', 'expression': 'is_paid IS NOT NULL'}, {'name': '2200_173096_8_not_null', 'expression': 'status IS NOT NULL'}, {'name': 'ck_dates', 'expression': '(check_out > check_in)'}]
+[2025-11-13 16:35:00.567526] INFO: FK-ограничения для stays: [{'name': 'stays_client_id_fkey', 'column': 'client_id', 'ref_table': 'clients', 'ref_column': 'id'}, {'name': 'stays_room_id_fkey', 'column': 'room_id', 'ref_table': 'rooms', 'ref_column': 'id'}]
+[2025-11-13 16:35:02.623360] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:02.653419] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:02.656711] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:02.687206] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:02.688131] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:02.718557] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:02.723536] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'passport'}]
+[2025-11-13 16:35:02.730729] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'last_name IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'first_name IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'passport IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 16:35:02.741902] INFO: FK-ограничения для clients: []
+[2025-11-13 16:35:09.331899] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 16:35:09.361966] INFO: Столбцов найдено: 6
+[2025-11-13 16:35:09.364955] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:09.398294] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:09.399200] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:35:09.432708] INFO: Столбцов найдено: 8
+[2025-11-13 16:35:09.437994] INFO: UNIQUE-ограничения для rooms: [{'name': 'rooms_room_number_key', 'column': 'room_number'}]
+[2025-11-13 16:35:09.444642] INFO: CHECK-ограничения для rooms: [{'name': '2200_173081_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173081_2_not_null', 'expression': 'room_number IS NOT NULL'}, {'name': '2200_173081_3_not_null', 'expression': 'capacity IS NOT NULL'}, {'name': '2200_173081_4_not_null', 'expression': 'comfort IS NOT NULL'}, {'name': '2200_173081_5_not_null', 'expression': 'price IS NOT NULL'}, {'name': 'rooms_amenities_check', 'expression': '(cardinality(amenities) <= 10)'}, {'name': 'rooms_capacity_check', 'expression': '(capacity > 0)'}, {'name': 'rooms_price_check', 'expression': '(price > (0)::numeric)'}]
+[2025-11-13 16:35:09.458219] INFO: FK-ограничения для rooms: []
+[2025-11-13 16:35:39.620883] INFO: ALTER: ALTER TABLE rooms ALTER COLUMN room_number TYPE boolean
+[2025-11-13 16:35:39.641738] ERROR: ОШИБКА:  столбец "room_number" нельзя автоматически привести к типу boolean
+HINT:  Возможно, необходимо указать "USING room_number::boolean".
+
+	ALTER TABLE rooms ALTER COLUMN room_number TYPE boolean
+
+[2025-11-13 16:36:04.504933] INFO: ALTER: ALTER TABLE rooms ALTER COLUMN id DROP NOT NULL
+[2025-11-13 16:36:04.506947] ERROR: ОШИБКА:  столбец "id" входит в первичный ключ
+
+	ALTER TABLE rooms ALTER COLUMN id DROP NOT NULL
+
+[2025-11-13 16:36:11.925565] INFO: ALTER: ALTER TABLE rooms ALTER COLUMN room_number SET NOT NULL
+[2025-11-13 16:36:11.931883] INFO: ALTER выполнен
+[2025-11-13 16:36:12.982385] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 16:36:13.017149] INFO: Столбцов найдено: 6
+[2025-11-13 16:36:13.020924] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:36:13.053962] INFO: Столбцов найдено: 8
+[2025-11-13 16:36:13.054827] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:36:13.082856] INFO: Столбцов найдено: 8
+[2025-11-13 16:36:13.088161] INFO: UNIQUE-ограничения для rooms: [{'name': 'rooms_room_number_key', 'column': 'room_number'}]
+[2025-11-13 16:36:13.094973] INFO: CHECK-ограничения для rooms: [{'name': '2200_173081_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173081_2_not_null', 'expression': 'room_number IS NOT NULL'}, {'name': '2200_173081_3_not_null', 'expression': 'capacity IS NOT NULL'}, {'name': '2200_173081_4_not_null', 'expression': 'comfort IS NOT NULL'}, {'name': '2200_173081_5_not_null', 'expression': 'price IS NOT NULL'}, {'name': 'rooms_amenities_check', 'expression': '(cardinality(amenities) <= 10)'}, {'name': 'rooms_capacity_check', 'expression': '(capacity > 0)'}, {'name': 'rooms_price_check', 'expression': '(price > (0)::numeric)'}]
+[2025-11-13 16:36:13.106435] INFO: FK-ограничения для rooms: []
+[2025-11-13 16:37:16.275817] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 16:37:16.302590] INFO: Столбцов найдено: 6
+[2025-11-13 16:37:20.259958] INFO: ALTER: ALTER TABLE rooms ADD CONSTRAINT fk_rooms_capacity FOREIGN KEY (capacity) REFERENCES rooms(id) ON DELETE CASCADE ON UPDATE CASCADE
+[2025-11-13 16:37:20.291199] INFO: ALTER выполнен
+[2025-11-13 16:37:21.816820] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 16:37:21.856681] INFO: Столбцов найдено: 6
+[2025-11-13 16:37:21.860028] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:37:21.892566] INFO: Столбцов найдено: 8
+[2025-11-13 16:37:21.893568] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:37:21.927381] INFO: Столбцов найдено: 8
+[2025-11-13 16:37:21.932679] INFO: UNIQUE-ограничения для rooms: [{'name': 'rooms_room_number_key', 'column': 'room_number'}]
+[2025-11-13 16:37:21.941194] INFO: CHECK-ограничения для rooms: [{'name': '2200_173081_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173081_2_not_null', 'expression': 'room_number IS NOT NULL'}, {'name': '2200_173081_3_not_null', 'expression': 'capacity IS NOT NULL'}, {'name': '2200_173081_4_not_null', 'expression': 'comfort IS NOT NULL'}, {'name': '2200_173081_5_not_null', 'expression': 'price IS NOT NULL'}, {'name': 'rooms_amenities_check', 'expression': '(cardinality(amenities) <= 10)'}, {'name': 'rooms_capacity_check', 'expression': '(capacity > 0)'}, {'name': 'rooms_price_check', 'expression': '(price > (0)::numeric)'}]
+[2025-11-13 16:37:21.956596] INFO: FK-ограничения для rooms: [{'name': 'fk_rooms_capacity', 'column': 'capacity', 'ref_table': 'rooms', 'ref_column': 'id'}]
+[2025-11-13 16:37:29.886037] INFO: ALTER: ALTER TABLE rooms DROP CONSTRAINT fk_rooms_capacity
+[2025-11-13 16:37:29.904858] INFO: ALTER выполнен
+[2025-11-13 16:37:30.809342] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 16:37:30.844183] INFO: Столбцов найдено: 6
+[2025-11-13 16:37:30.847497] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:37:30.877622] INFO: Столбцов найдено: 8
+[2025-11-13 16:37:30.878761] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 16:37:30.909544] INFO: Столбцов найдено: 8
+[2025-11-13 16:37:30.914368] INFO: UNIQUE-ограничения для rooms: [{'name': 'rooms_room_number_key', 'column': 'room_number'}]
+[2025-11-13 16:37:30.922215] INFO: CHECK-ограничения для rooms: [{'name': '2200_173081_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173081_2_not_null', 'expression': 'room_number IS NOT NULL'}, {'name': '2200_173081_3_not_null', 'expression': 'capacity IS NOT NULL'}, {'name': '2200_173081_4_not_null', 'expression': 'comfort IS NOT NULL'}, {'name': '2200_173081_5_not_null', 'expression': 'price IS NOT NULL'}, {'name': 'rooms_amenities_check', 'expression': '(cardinality(amenities) <= 10)'}, {'name': 'rooms_capacity_check', 'expression': '(capacity > 0)'}, {'name': 'rooms_price_check', 'expression': '(price > (0)::numeric)'}]
+[2025-11-13 16:37:30.936725] INFO: FK-ограничения для rooms: []
+[2025-11-13 16:37:47.898417] INFO: Закрытие подключения к БД...
+[2025-11-13 16:37:47.899197] INFO: Подключение к БД закрыто
+[2025-11-13 16:53:23.833567] INFO: Подключение к БД hotel_db...
+[2025-11-13 16:53:25.267287] INFO: Подключение к БД прошло успешно.
+[2025-11-13 16:55:16.181850] INFO: Подключение к БД hotel_db...
+[2025-11-13 16:55:17.726460] INFO: Подключение к БД прошло успешно.
+[2025-11-13 16:57:46.498079] INFO: Подключение к БД hotel_db...
+[2025-11-13 16:57:47.843021] INFO: Подключение к БД прошло успешно.
+[2025-11-13 16:58:07.819097] INFO: SELECT: SELECT t.client, t.room_number, t.comfort, t.check_in, t.check_out, t.paid, t.status FROM (
+
+            SELECT 
+                s.id AS stay_id,
+                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
+                r.room_number AS room_number,
+                r.comfort AS comfort,
+                s.check_in AS check_in,
+                s.check_out AS check_out,
+                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
+                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
+            FROM stays s
+            JOIN clients c ON s.client_id = c.id
+            JOIN rooms   r ON s.room_id   = r.id
+        
+) t
+[2025-11-13 16:58:15.805254] INFO: SELECT: SELECT t.room_number, t.comfort, t.check_in, t.check_out, t.paid, t.status FROM (
+
+            SELECT 
+                s.id AS stay_id,
+                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
+                r.room_number AS room_number,
+                r.comfort AS comfort,
+                s.check_in AS check_in,
+                s.check_out AS check_out,
+                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
+                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
+            FROM stays s
+            JOIN clients c ON s.client_id = c.id
+            JOIN rooms   r ON s.room_id   = r.id
+        
+) t
+[2025-11-13 16:58:18.197750] INFO: SELECT: SELECT t.stay_id, t.client, t.room_number, t.comfort, t.check_in, t.check_out, t.paid, t.status FROM (
+
+            SELECT 
+                s.id AS stay_id,
+                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
+                r.room_number AS room_number,
+                r.comfort AS comfort,
+                s.check_in AS check_in,
+                s.check_out AS check_out,
+                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
+                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
+            FROM stays s
+            JOIN clients c ON s.client_id = c.id
+            JOIN rooms   r ON s.room_id   = r.id
+        
+) t
+[2025-11-13 16:58:46.026095] INFO: SELECT: SELECT t.stay_id, t.client, t.room_number, t.comfort, t.check_in, t.check_out, t.paid, t.status FROM (
+
+            SELECT 
+                s.id AS stay_id,
+                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
+                r.room_number AS room_number,
+                r.comfort AS comfort,
+                s.check_in AS check_in,
+                s.check_out AS check_out,
+                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
+                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
+            FROM stays s
+            JOIN clients c ON s.client_id = c.id
+            JOIN rooms   r ON s.room_id   = r.id
+        
+) t WHERE t.stay_id > %s
+[2025-11-13 16:59:42.124762] INFO: SELECT: SELECT t.client, SUM(t.stay_id) AS agg_value FROM (
+
+            SELECT 
+                s.id AS stay_id,
+                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
+                r.room_number AS room_number,
+                r.comfort AS comfort,
+                s.check_in AS check_in,
+                s.check_out AS check_out,
+                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
+                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
+            FROM stays s
+            JOIN clients c ON s.client_id = c.id
+            JOIN rooms   r ON s.room_id   = r.id
+        
+) t GROUP BY t.client HAVING SUM(t.stay_id) > %s
+[2025-11-13 17:00:01.649119] INFO: SELECT: SELECT t.stay_id, t.client, t.room_number, t.comfort, t.check_in, t.check_out, t.paid, t.status FROM (
+
+            SELECT 
+                s.id AS stay_id,
+                c.last_name || ' ' || c.first_name || ' ' || COALESCE(c.patronymic, '') AS client,
+                r.room_number AS room_number,
+                r.comfort AS comfort,
+                s.check_in AS check_in,
+                s.check_out AS check_out,
+                CASE WHEN s.is_paid THEN 'Да' ELSE 'Нет' END AS paid,
+                CASE WHEN s.status THEN 'Активно' ELSE 'Завершено' END AS status
+            FROM stays s
+            JOIN clients c ON s.client_id = c.id
+            JOIN rooms   r ON s.room_id   = r.id
+        
+) t
+[2025-11-13 17:00:21.930524] INFO: Закрытие подключения к БД...
+[2025-11-13 17:00:21.931256] INFO: Подключение к БД закрыто
+[2025-11-13 17:05:53.924253] INFO: Подключение к БД hotel_db...
+[2025-11-13 17:05:55.383767] INFO: Подключение к БД прошло успешно.
+[2025-11-13 17:06:00.555567] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 17:06:00.559380] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 17:06:03.263473] INFO: Закрытие подключения к БД...
+[2025-11-13 17:06:03.264181] INFO: Подключение к БД закрыто
+[2025-11-13 17:27:51.527880] INFO: Подключение к БД hotel_db...
+[2025-11-13 17:27:53.375269] INFO: Подключение к БД прошло успешно.
+[2025-11-13 17:27:56.015282] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 17:27:56.019531] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 17:28:01.231505] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:28:01.330024] INFO: Столбцов найдено: 8
+[2025-11-13 17:28:32.191436] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 17:28:32.195004] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp', 'comfort_enum']
+[2025-11-13 17:28:49.825887] INFO: Загрузка столбцов таблицы rooms...
+[2025-11-13 17:28:49.863653] INFO: Столбцов найдено: 6
+[2025-11-13 17:28:49.867250] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:28:49.901627] INFO: Столбцов найдено: 8
+[2025-11-13 17:28:49.902536] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:28:49.935261] INFO: Столбцов найдено: 8
+[2025-11-13 17:28:49.941338] INFO: UNIQUE-ограничения для rooms: [{'name': 'rooms_room_number_key', 'column': 'room_number'}]
+[2025-11-13 17:28:49.950354] INFO: CHECK-ограничения для rooms: [{'name': '2200_173081_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173081_2_not_null', 'expression': 'room_number IS NOT NULL'}, {'name': '2200_173081_3_not_null', 'expression': 'capacity IS NOT NULL'}, {'name': '2200_173081_4_not_null', 'expression': 'comfort IS NOT NULL'}, {'name': '2200_173081_5_not_null', 'expression': 'price IS NOT NULL'}, {'name': 'rooms_amenities_check', 'expression': '(cardinality(amenities) <= 10)'}, {'name': 'rooms_capacity_check', 'expression': '(capacity > 0)'}, {'name': 'rooms_price_check', 'expression': '(price > (0)::numeric)'}]
+[2025-11-13 17:28:49.964487] INFO: FK-ограничения для rooms: []
+[2025-11-13 17:28:52.049179] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:28:52.079385] INFO: Столбцов найдено: 8
+[2025-11-13 17:28:52.082779] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:28:52.117582] INFO: Столбцов найдено: 8
+[2025-11-13 17:28:52.118538] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:28:52.152946] INFO: Столбцов найдено: 8
+[2025-11-13 17:28:52.158202] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'passport'}]
+[2025-11-13 17:28:52.165434] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'last_name IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'first_name IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'passport IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 17:28:52.180610] INFO: FK-ограничения для clients: []
+[2025-11-13 17:29:06.760104] INFO: ALTER: ALTER TABLE clients RENAME COLUMN last_name TO aaaaaaaa
+[2025-11-13 17:29:06.780879] INFO: ALTER выполнен
+[2025-11-13 17:29:07.845685] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:07.877052] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:07.880503] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:07.913756] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:07.914484] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:07.948966] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:07.953875] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'passport'}]
+[2025-11-13 17:29:07.962917] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'aaaaaaaa IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'first_name IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'passport IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 17:29:07.975027] INFO: FK-ограничения для clients: []
+[2025-11-13 17:29:16.475707] INFO: ALTER: ALTER TABLE clients RENAME COLUMN first_name TO sssssssss
+[2025-11-13 17:29:16.478321] INFO: ALTER выполнен
+[2025-11-13 17:29:17.359682] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:17.391207] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:17.395059] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:17.427041] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:17.427804] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:17.462098] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:17.467476] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'passport'}]
+[2025-11-13 17:29:17.474274] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'aaaaaaaa IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'sssssssss IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'passport IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 17:29:17.486201] INFO: FK-ограничения для clients: []
+[2025-11-13 17:29:22.108129] INFO: ALTER: ALTER TABLE clients RENAME COLUMN patronymic TO dddddddd
+[2025-11-13 17:29:22.110656] INFO: ALTER выполнен
+[2025-11-13 17:29:22.860155] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:22.896212] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:22.899363] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:22.934962] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:22.935705] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:22.971052] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:22.976368] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'passport'}]
+[2025-11-13 17:29:22.985001] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'aaaaaaaa IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'sssssssss IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'passport IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 17:29:22.996631] INFO: FK-ограничения для clients: []
+[2025-11-13 17:29:27.668239] INFO: ALTER: ALTER TABLE clients RENAME COLUMN passport TO fffffff
+[2025-11-13 17:29:27.671046] INFO: ALTER выполнен
+[2025-11-13 17:29:28.508560] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:28.546530] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:28.550032] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:28.582623] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:28.583451] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:28.615581] INFO: Столбцов найдено: 8
+[2025-11-13 17:29:28.621444] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'fffffff'}]
+[2025-11-13 17:29:28.630067] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_1_not_null', 'expression': 'id IS NOT NULL'}, {'name': '2200_173068_2_not_null', 'expression': 'aaaaaaaa IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'sssssssss IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'fffffff IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 17:29:28.645621] INFO: FK-ограничения для clients: []
+[2025-11-13 17:29:30.747325] INFO: ALTER: ALTER TABLE clients DROP COLUMN id CASCADE
+[2025-11-13 17:29:30.772153] INFO: ALTER выполнен
+[2025-11-13 17:29:32.241344] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:32.273142] INFO: Столбцов найдено: 7
+[2025-11-13 17:29:32.277120] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:32.310668] INFO: Столбцов найдено: 7
+[2025-11-13 17:29:32.311365] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 17:29:32.339697] INFO: Столбцов найдено: 7
+[2025-11-13 17:29:32.344754] INFO: UNIQUE-ограничения для clients: [{'name': 'clients_passport_key', 'column': 'fffffff'}]
+[2025-11-13 17:29:32.352614] INFO: CHECK-ограничения для clients: [{'name': '2200_173068_2_not_null', 'expression': 'aaaaaaaa IS NOT NULL'}, {'name': '2200_173068_3_not_null', 'expression': 'sssssssss IS NOT NULL'}, {'name': '2200_173068_5_not_null', 'expression': 'fffffff IS NOT NULL'}, {'name': '2200_173068_7_not_null', 'expression': 'is_regular IS NOT NULL'}, {'name': '2200_173068_8_not_null', 'expression': 'registered IS NOT NULL'}]
+[2025-11-13 17:29:32.364291] INFO: FK-ограничения для clients: []
+[2025-11-13 17:29:38.128273] ERROR: Ошибка при загрузке данных из БД: ОШИБКА:  столбец c.id не существует
+LINE 12:                 JOIN clients c ON s.client_id = c.id 
+                                                         ^
+HINT:  Возможно, предполагалась ссылка на столбец "s.id".
+
+[2025-11-13 17:30:15.871425] INFO: Закрытие подключения к БД...
+[2025-11-13 17:30:15.872160] INFO: Подключение к БД закрыто
+[2025-11-13 18:10:33.648904] INFO: Подключение к БД hotel_db...
+[2025-11-13 18:10:35.056440] INFO: Подключение к БД прошло успешно.
+[2025-11-13 18:10:38.512335] INFO: Загрузка столбцов таблицы stays...
+[2025-11-13 18:10:38.662241] INFO: Столбцов найдено: 8
+[2025-11-13 18:10:38.682190] ERROR: Ошибка при загрузке данных из БД: ОШИБКА:  столбец c.id не существует
+LINE 12: ...                    JOIN "clients" c ON s.client_id = c."id"
+                                                                  ^
+HINT:  Возможно, предполагалась ссылка на столбец "s.id".
+
+[2025-11-13 18:18:03.315468] INFO: Подключение к БД hotel_db...
+[2025-11-13 18:18:05.322941] INFO: Подключение к БД прошло успешно.
+[2025-11-13 18:18:05.991597] INFO: Загрузка столбцов таблицы stays...
+[2025-11-13 18:18:06.102416] INFO: Столбцов найдено: 8
+[2025-11-13 18:18:06.103013] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 18:18:06.140260] INFO: Столбцов найдено: 7
+[2025-11-13 18:18:06.147939] ERROR: Ошибка при загрузке данных из БД: ОШИБКА:  столбец c.id не существует
+LINE 12:                    JOIN "clients" c ON s.client_id = c."id"
+                                                              ^
+HINT:  Возможно, предполагалась ссылка на столбец "s.id".
+
+[2025-11-13 19:03:45.720212] INFO: Подключение к БД hotel_db...
+[2025-11-13 19:03:47.250038] INFO: Подключение к БД прошло успешно.
+[2025-11-13 19:03:48.011583] INFO: Загрузка столбцов таблицы stays...
+[2025-11-13 19:03:48.128937] INFO: Столбцов найдено: 8
+[2025-11-13 19:03:48.129916] INFO: Загрузка столбцов таблицы clients...
+[2025-11-13 19:03:48.169352] INFO: Столбцов найдено: 7
+[2025-11-13 19:03:48.177629] ERROR: Ошибка при загрузке данных из БД: ОШИБКА:  столбец c.id не существует
+LINE 12:                    JOIN "clients" c ON s.client_id = c."id"
+                                                              ^
+HINT:  Возможно, предполагалась ссылка на столбец "s.id".
+
+[2025-11-13 19:03:50.722974] ERROR: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+	
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_type = 'BASE TABLE'
+            ORDER BY table_name;
+        
+
+[2025-11-13 19:03:56.788020] ERROR: Не удалось получить ENUM-типы: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:03:56.790746] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp']
+[2025-11-13 19:03:56.797256] ERROR: Не удалось получить ENUM-типы: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:03:56.798630] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp']
+[2025-11-13 19:04:02.706769] ERROR: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+	
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_type = 'BASE TABLE'
+            ORDER BY table_name;
+        
+
+[2025-11-13 19:04:04.098957] ERROR: Не удалось получить ENUM-типы: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:04:04.099831] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp']
+[2025-11-13 19:04:04.104983] ERROR: Не удалось получить ENUM-типы: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:04:04.105950] INFO: Доступные типы данных: ['integer', 'bigint', 'numeric(10,2)', 'text', 'varchar(50)', 'boolean', 'date', 'timestamp']
+[2025-11-13 19:04:07.433960] INFO: Загрузка столбцов таблицы stays...
+[2025-11-13 19:04:07.435358] ERROR: Ошибка при получении столбцов public.stays: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:04:07.436038] ERROR: Не удалось автоматически определить внешние ключи для stays: Не удалось получить столбцы: Ошибка БД: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:04:07.437423] ERROR: Ошибка при загрузке данных из БД: ОШИБКА:  текущая транзакция прервана, команды до конца блока транзакции игнорируются
+
+[2025-11-13 19:04:14.121944] INFO: Закрытие подключения к БД...
+[2025-11-13 19:04:14.122672] INFO: Подключение к БД закрыто
