@@ -5,14 +5,125 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
+from app.ui.theme import *
 
 
 class JoinMasterDialog(QDialog):
-    """мастер выбора таблиц, полей и типа JOIN"""
+    # мастер выбора таблиц, полей и типа JOIN
 
     def __init__(self, db, parent=None):
         super().__init__(parent)
         self.db = db
+
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {WINDOW_BG};
+                color: {TEXT_MAIN};
+            }}
+            QGroupBox {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                border: 5px solid {CARD_BORDER};
+                border-radius: 12px;
+                border-right: 0.5px solid {ACCENT_PRIMARY};
+                margin-top: 18px;
+                padding: 10px 10px 14px 10px;
+                font-weight: bold;
+                font-size: 16px;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 12px;
+                padding: 0 6px;
+                background-color: {CARD_BG};
+                color: {ACCENT_PRIMARY};
+                font-weight: bold;
+            }}
+            QTableWidget {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                gridline-color: #404040;
+                border: 1px solid {CARD_BORDER};
+                border-radius: 8px;
+            }}
+            QTableWidget::item {{
+                padding: 6px;
+                border-bottom: 1px solid {CARD_BORDER};
+            }}
+            QTableWidget::item:selected {{
+                background-color: {ACCENT_PRIMARY};
+                color: {WINDOW_BG};
+                font-weight: bold;
+            }}
+            QHeaderView::section {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                padding: 8px;
+                border: none;
+                border-right: 1px solid {CARD_BORDER};
+                border-bottom: 1px solid {CARD_BORDER};
+                font-weight: bold;
+            }}
+            QLineEdit, QComboBox {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 2px solid {CARD_BORDER};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+                selection-background-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit:focus, QComboBox:focus {{
+                border-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit::placeholder {{
+                color: {TEXT_MUTED};
+                font-style: italic;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                selection-background-color: {ACCENT_PRIMARY};
+                selection-color: {WINDOW_BG};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox::down-arrow {{
+                border: none;
+                width: 12px;
+                height: 12px;
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 2px;
+            }}
+            QLabel {{
+                color: {TEXT_SOFT};
+                font-weight: bold;
+                font-size: 12px;
+            }}
+            QScrollArea {{
+                background-color: {WINDOW_BG};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {CARD_BG};
+                width: 8px;
+                border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {ACCENT_SUCCESS};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+                height: 0px;
+            }}""")
 
         self.table1 = None
         self.table2 = None
@@ -138,7 +249,7 @@ class JoinMasterDialog(QDialog):
             return [r["column_name"] for r in cur.fetchall()]
 
     def _fetch_columns_full(self, table):
-        """возвращает [{column_name, data_type}]"""
+        # возвращает [{column_name, data_type}]
         q = """
             SELECT column_name, data_type
             FROM information_schema.columns
@@ -162,7 +273,7 @@ class JoinMasterDialog(QDialog):
             return res["data_type"] if res else None
 
     def _is_compatible(self, type1, type2):
-        """примерная проверка на совместимость"""
+        # примерная проверка на совместимость
         if not type1 or not type2:
             return False
 
@@ -188,8 +299,8 @@ class JoinMasterDialog(QDialog):
         self.col2 = self.cb_col2.currentText()
         self.join_type = self.cb_join_type.currentText()
 
-        # ⚠ ВАЖНО: здесь мы больше НЕ спрашиваем пользователя про колонки.
-        # Просто берём ВСЕ колонки из обеих таблиц в формате table.col
+        # здесь мы больше НЕ спрашиваем пользователя про колонки
+        # просто берём ВСЕ колонки из обеих таблиц в формате table.col
         cols1 = self._fetch_columns(self.table1)
         cols2 = self._fetch_columns(self.table2)
         self.selected_columns = [f"{self.table1}.{c}" for c in cols1] + [
