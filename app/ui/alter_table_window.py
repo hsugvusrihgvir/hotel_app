@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from app.log.log import app_logger
-
+from app.ui.theme import *
 
 def setup_wide_combo(cmb: QComboBox, min_chars: int = 18, popup_width: int = 260):
     """
@@ -34,64 +34,144 @@ class AlterTableWindow(QDialog):
 
         self.setWindowTitle("Изменение структуры таблиц")
         # поуже, но высокое окно
-        self.resize(880, 680)
+        self.resize(1000, 680)
 
         # числовые колонки текущей таблицы (для простых CHECK)
         self.numeric_cols: list[str] = []
 
         # мягкая тёмная тема + пастельные кнопки
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #111217;
-                color: #e5e7eb;
-            }
-            QGroupBox {
-                border: 1px solid #2f3543;
-                border-radius: 8px;
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {WINDOW_BG};
+                color: {TEXT_MAIN};
+            }}
+            QGroupBox {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                border: 1px solid {CARD_BORDER};
+                border-radius: 12px;
+                border-right: 0.5px solid {ACCENT_PRIMARY};
                 margin-top: 18px;
                 padding: 10px 10px 14px 10px;
-                background-color: #171a23;
-                font-weight: 500;
-            }
-            QGroupBox::title {
+                font-weight: bold;
+                font-size: 13px;
+            }}
+            QGroupBox::title {{
                 subcontrol-origin: margin;
                 left: 12px;
                 padding: 0 6px;
-                background-color: #171a23;
-            }
-            QPushButton {
-                background-color: #4f8cc9;   /* мягкий голубой */
-                color: #f9fafb;
+                background-color: {CARD_BG};
+                color: {ACCENT_PRIMARY};
+                font-weight: bold;
+            }}
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border: 1px solid {BTN_BORDER};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 14px;
+                font-weight: 500;
+                min-height: 20px;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:disabled {{
+                background-color: #252937;
+                color: #9CA3AF;
+                border-color: #3A4257;
+            }}
+            QTableWidget {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                gridline-color: #404040;
+                border: 1px solid {CARD_BORDER};
+                border-radius: 8px;
+            }}
+            QTableWidget::item {{
+                padding: 6px;
+                border-bottom: 1px solid {CARD_BORDER};
+            }}
+            QTableWidget::item:selected {{
+                background-color: {ACCENT_PRIMARY};
+                color: {WINDOW_BG};
+                font-weight: bold;
+            }}
+            QHeaderView::section {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                padding: 8px;
                 border: none;
+                border-right: 1px solid {CARD_BORDER};
+                border-bottom: 1px solid {CARD_BORDER};
+                font-weight: bold;
+            }}
+            QLineEdit, QComboBox {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 2px solid {CARD_BORDER};
                 border-radius: 6px;
-                padding: 4px 10px;
-            }
-            QPushButton:hover {
-                background-color: #3e74ab;
-            }
-            QPushButton:disabled {
-                background-color: #4b5563;
-            }
-            QTableWidget {
-                background-color: #050814;
-                gridline-color: #374151;
-            }
-            QHeaderView::section {
-                background-color: #111827;
-                padding: 3px 4px;
-                border: 1px solid #272b38;
-            }
-            QLineEdit, QComboBox {
-                background-color: #050814;
-                border: 1px solid #4b5563;
+                padding: 6px 10px;
+                font-size: 13px;
+                selection-background-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit:focus, QComboBox:focus {{
+                border-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit::placeholder {{
+                color: {TEXT_MUTED};
+                font-style: italic;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                selection-background-color: {ACCENT_PRIMARY};
+                selection-color: {WINDOW_BG};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox::down-arrow {{
+                border: none;
+                width: 12px;
+                height: 12px;
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 2px;
+            }}
+            QLabel {{
+                color: {TEXT_SOFT};
+                font-weight: bold;
+                font-size: 12px;
+            }}
+            QScrollArea {{
+                background-color: {WINDOW_BG};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {CARD_BG};
+                width: 8px;
                 border-radius: 4px;
-                padding: 2px 4px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #050814;
-                selection-background-color: #3e74ab;
-                selection-color: #f9fafb;
-            }
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {ACCENT_SUCCESS};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+                height: 0px;
+            }}
         """)
 
         self._build_ui()
@@ -115,6 +195,7 @@ class AlterTableWindow(QDialog):
         main_layout.addWidget(scroll)
 
         container = QWidget()
+        container.setStyleSheet(f"background-color: {WINDOW_BG};")
         scroll.setWidget(container)
 
         layout = QVBoxLayout(container)
@@ -393,9 +474,13 @@ class AlterTableWindow(QDialog):
 
         row_fk2.addWidget(QLabel("Столбец-ссылка:"))
         row_fk2.addWidget(self.cb_fk_ref_col)
-        row_fk2.addWidget(QLabel("ON DELETE"))
+        lbl_on_delete = QLabel("ON DELETE")
+        lbl_on_delete.setStyleSheet(f"color: {ACCENT_SUCCESS}; font-weight: bold;")
+        row_fk2.addWidget(lbl_on_delete)
         row_fk2.addWidget(self.cb_fk_on_delete)
-        row_fk2.addWidget(QLabel("ON UPDATE"))
+        lbl_on_update = QLabel("ON UPDATE")
+        lbl_on_update.setStyleSheet(f"color: {ACCENT_SUCCESS}; font-weight: bold;")
+        row_fk2.addWidget(lbl_on_update)
         row_fk2.addWidget(self.cb_fk_on_update)
         row_fk2.addWidget(self.btn_add_fk, 0, Qt.AlignRight)
 
