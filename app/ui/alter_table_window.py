@@ -10,9 +10,6 @@ from app.log.log import app_logger
 from app.ui.theme import *
 
 def setup_wide_combo(cmb: QComboBox, min_chars: int = 18, popup_width: int = 260):
-    """
-    Настройки для комбобоксов с длинными названиями колонок.
-    """
     cmb.setMinimumContentsLength(min_chars)
     cmb.setSizeAdjustPolicy(QComboBox.AdjustToContents)
     cmb.setMinimumWidth(popup_width)
@@ -20,26 +17,47 @@ def setup_wide_combo(cmb: QComboBox, min_chars: int = 18, popup_width: int = 260
 
 
 def style_button(btn: QPushButton):
-    """Ограничиваем ширину, чтобы кнопки не растягивались на весь ряд."""
     btn.setMinimumWidth(150)
     btn.setMaximumWidth(190)
+    btn.setStyleSheet(
+        f"""
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border: 1px solid {BTN_BORDER};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 14px;
+                font-weight: 500;
+                min-height: 20px;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:disabled {{
+                background-color: #252937;
+                color: #9CA3AF;
+                border-color: #3A4257;
+            }}
+        """
+    )
 
 
 class AlterTableWindow(QDialog):
-    """Окно изменения структуры таблиц: столбцы, ключи, UNIQUE / FK / CHECK."""
-
     def __init__(self, db, parent=None):
         super().__init__(parent)
         self.db = db
 
         self.setWindowTitle("Изменение структуры таблиц")
-        # поуже, но высокое окно
         self.resize(1000, 680)
 
         # числовые колонки текущей таблицы (для простых CHECK)
         self.numeric_cols: list[str] = []
-
-        # мягкая тёмная тема + пастельные кнопки
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {WINDOW_BG};
@@ -63,29 +81,6 @@ class AlterTableWindow(QDialog):
                 background-color: {CARD_BG};
                 color: {ACCENT_PRIMARY};
                 font-weight: bold;
-            }}
-            QPushButton {{
-                background-color: {BTN_BG};
-                color: {BTN_TEXT};
-                border: 1px solid {BTN_BORDER};
-                border-radius: 8px;
-                padding: 6px 14px;
-                font-size: 14px;
-                font-weight: 500;
-                min-height: 20px;
-            }}
-            QPushButton:hover {{
-                background-color: {BTN_BG_HOVER};
-                border-color: {BTN_BORDER};
-            }}
-            QPushButton:pressed {{
-                background-color: {BTN_BG_PRESSED};
-                border-color: {BTN_BORDER};
-            }}
-            QPushButton:disabled {{
-                background-color: #252937;
-                color: #9CA3AF;
-                border-color: #3A4257;
             }}
             QTableWidget {{
                 background-color: {CENTRAL_BG};
