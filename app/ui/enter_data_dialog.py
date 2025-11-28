@@ -1,106 +1,281 @@
-# app/enter_data_dialog.py
-# расширенный модальный диалог добавления данных
-# поддерживает ENUM, массивы, NOT NULL, валидацию и динамические формы
-
 from PySide6.QtWidgets import (
     QDialog, QMessageBox, QLabel, QLineEdit, QComboBox,
-    QVBoxLayout, QHBoxLayout, QWidget, QDateEdit, QDateTimeEdit
+    QVBoxLayout, QHBoxLayout, QWidget, QDateEdit, QDateTimeEdit,
+    QScrollArea, QPushButton, QFrame
 )
 from PySide6.QtCore import Qt, QRegularExpression, QDate, QDateTime
-from PySide6.QtGui import QIntValidator, QDoubleValidator
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator, QFont, QPalette, QColor
 
-from app.ui.ui_enter_data_dialog import UIEnterDataDialog
 from app.log.log import app_logger
-
-from PySide6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator
-from PySide6.QtCore import QRegularExpression
-
+from app.ui.theme import *
 
 
 class EnterDataDialog(QDialog):
-    """полноценное окно вставки данных во все таблицы"""
-
     def __init__(self, db, parent=None):
         super().__init__(parent)
         self.db = db
+        self.fields = {}
+        self.col_info = {}
+        self.current_table = ""
 
-        # подключаем UI
-        self.ui = UIEnterDataDialog()
-        self.ui.setupUi(self)
-
+        self.setWindowTitle("Добавить запись")
+        self.resize(520, 600)
         self.setModal(True)
-        self.fields = {}       # имя_поля -> виджет
-        self.col_info = {}     # имя_поля -> инфо (тип/nullable/default)
 
-        self._connect()
+        self.setStyleSheet(f"""
+                    QDialog {{
+                        background-color: {WINDOW_BG};
+                        color: {TEXT_MAIN};
+                    }}
+                    QScrollArea {{
+                        background-color: {WINDOW_BG};
+                        border: none;
+                    }}
+                    QScrollBar:vertical {{
+                        background-color: {CARD_BG};
+                        width: 8px;
+                        border-radius: 4px;
+                    }}
+                    QScrollBar::handle:vertical {{
+                        background-color: {ACCENT_PRIMARY};
+                        border-radius: 4px;
+                        min-height: 20px;
+                    }}
+                    QScrollBar::handle:vertical:hover {{
+                        background-color: {ACCENT_SUCCESS};
+                    }}
+                """)
+
+        self._build_ui()
+        self._connect_signals()
         self._load_tables()
 
-    # ----------------------------------------------------------------------
-    # signals
-    # ----------------------------------------------------------------------
+    def _build_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
 
-    def _connect(self):
-        self.ui.table_selector.currentTextChanged.connect(self._load_fields)
-        self.ui.btn_save.clicked.connect(self._on_save)
-        self.ui.btn_cancel.clicked.connect(self.reject)
+        self.setStyleSheet(f"""
+                    QDialog {{
+                        background-color: {WINDOW_BG};
+                        color: {TEXT_MAIN};
+                    }}
+                    QGroupBox {{
+                        background-color: {CARD_BG};
+                        color: {TEXT_SOFT};
+                        border: 5px solid {CARD_BORDER};
+                        border-radius: 12px;
+                        border-right: 0.5px solid {ACCENT_PRIMARY};
+                        margin-top: 18px;
+                        padding: 10px 10px 14px 10px;
+                        font-weight: bold;
+                        font-size: 16px;
+                    }}
+                    QGroupBox::title {{
+                        subcontrol-origin: margin;
+                        left: 12px;
+                        padding: 0 6px;
+                        background-color: {CARD_BG};
+                        color: {ACCENT_PRIMARY};
+                        font-weight: bold;
+                    }}
+                    QTableWidget {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        gridline-color: #404040;
+                        border: 1px solid {CARD_BORDER};
+                        border-radius: 8px;
+                    }}
+                    QTableWidget::item {{
+                        padding: 6px;
+                        border-bottom: 1px solid {CARD_BORDER};
+                    }}
+                    QTableWidget::item:selected {{
+                        background-color: {ACCENT_PRIMARY};
+                        color: {WINDOW_BG};
+                        font-weight: bold;
+                    }}
+                    QHeaderView::section {{
+                        background-color: {CARD_BG};
+                        color: {TEXT_SOFT};
+                        padding: 8px;
+                        border: none;
+                        border-right: 1px solid {CARD_BORDER};
+                        border-bottom: 1px solid {CARD_BORDER};
+                        font-weight: bold;
+                    }}
+                    QLineEdit, QComboBox {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        border: 2px solid {CARD_BORDER};
+                        border-radius: 6px;
+                        padding: 6px 10px;
+                        font-size: 13px;
+                        selection-background-color: {ACCENT_PRIMARY};
+                    }}
+                    QLineEdit:focus, QComboBox:focus {{
+                        border-color: {ACCENT_PRIMARY};
+                    }}
+                    QLineEdit::placeholder {{
+                        color: {TEXT_MUTED};
+                        font-style: italic;
+                    }}
+                    QComboBox QAbstractItemView {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        border: 1px solid {CARD_BORDER};
+                        selection-background-color: {ACCENT_PRIMARY};
+                        selection-color: {WINDOW_BG};
+                    }}
+                    QComboBox::drop-down {{
+                        border: none;
+                    }}
+                    QComboBox::down-arrow {{
+                        border: none;
+                        width: 12px;
+                        height: 12px;
+                        background-color: {ACCENT_PRIMARY};
+                        border-radius: 2px;
+                    }}
+                    QLabel {{
+                        color: {TEXT_SOFT};
+                        font-weight: bold;
+                        font-size: 12px;
+                    }}
+                    QScrollArea {{
+                        background-color: {WINDOW_BG};
+                        border: none;
+                    }}
+                    QScrollBar:vertical {{
+                        background-color: {CARD_BG};
+                        width: 8px;
+                        border-radius: 4px;
+                    }}
+                    QScrollBar::handle:vertical {{
+                        background-color: {ACCENT_PRIMARY};
+                        border-radius: 4px;
+                        min-height: 20px;
+                    }}
+                    QScrollBar::handle:vertical:hover {{
+                        background-color: {ACCENT_SUCCESS};
+                    }}
+                    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                        border: none;
+                        background: none;
+                        height: 0px;
+                    }}
+                """)
 
-    # ----------------------------------------------------------------------
-    # load tables
-    # ----------------------------------------------------------------------
+        # выбор таблицы
+        table_layout = QHBoxLayout()
+        table_layout.addWidget(QLabel("Таблица:"))
+
+        self.table_selector = QComboBox()
+        table_layout.addWidget(self.table_selector, 1)
+        main_layout.addLayout(table_layout)
+
+        # с полями ввода
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none;")
+
+        self.fields_widget = QWidget()
+        self.fields_layout = QVBoxLayout(self.fields_widget)
+        self.fields_layout.setContentsMargins(5, 5, 5, 5)
+        self.fields_layout.setSpacing(12)
+
+        scroll.setWidget(self.fields_widget)
+        main_layout.addWidget(scroll, 1)
+
+        # кнопки
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(15)
+
+        self.btn_save = self._create_button("Сохранить")
+        self.btn_cancel = self._create_button("Отмена")
+
+        btn_layout.addWidget(self.btn_save)
+        btn_layout.addWidget(self.btn_cancel)
+        main_layout.addLayout(btn_layout)
+
+    def _create_button(self, text):
+        btn = QPushButton(text)
+        btn.setMinimumHeight(40)
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 14px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+            }}
+        """)
+        return btn
+
+    def _connect_signals(self):
+        self.table_selector.currentTextChanged.connect(self._load_fields)
+        self.btn_save.clicked.connect(self._on_save)
+        self.btn_cancel.clicked.connect(self.reject)
 
     def _load_tables(self):
         try:
             tables = self.db.get_tables()
-            self.ui.table_selector.clear()
-            self.ui.table_selector.addItems(tables)
+            self.table_selector.clear()
+            self.table_selector.addItems(tables)
+
+            if tables:
+                self._load_fields(tables[0])
+
         except Exception as e:
-            app_logger.error(e)
+            app_logger.error(f"Ошибка загрузки таблиц: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить список таблиц:\n{e}")
 
-    # ----------------------------------------------------------------------
-    # fields loader
-    # ----------------------------------------------------------------------
-
-    def _load_fields(self):
-        """строим UI по структуре выбранной таблицы + ограничения ввода"""
-        table = self.ui.table_selector.currentText()
-        if not table:
+    def _load_fields(self, table_name):
+        if not table_name or table_name == self.current_table:
             return
 
+        self.current_table = table_name
+
         # очищаем старые поля
-        ly = self.ui.fields_layout
-        while ly.count():
-            item = ly.takeAt(0)
-            w = item.widget()
-            if w:
-                w.deleteLater()
+        while self.fields_layout.count():
+            item = self.fields_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         self.fields.clear()
         self.col_info.clear()
 
         try:
-            cols = self.db.get_table_columns(table)
-            fkeys = self.db.get_foreign_keys(table)
+            cols = self.db.get_table_columns(table_name) # колонки таблицы
+            fkeys = self.db.get_foreign_keys(table_name) # внешние ключи
         except Exception as e:
-            app_logger.error(e)
+            app_logger.error(f"Ошибка загрузки структуры таблицы {table_name}: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось получить структуру таблицы:\n{e}")
             return
 
+        # обработка fkeys
         fk_dict = {fk["column"]: fk for fk in fkeys}
 
         for col in cols:
             name = col["column_name"]
-
-            # SERIAL id — не вводим руками, БД сама
-            if name == "id":
-                continue
-
-            dtype = col["data_type"]  # 'character varying', 'integer', ...
+            dtype = col["data_type"]
             nullable = col["is_nullable"] == "YES"
             enum_values = col.get("enum_values")
             default = col.get("column_default")
-            max_len = col.get("character_maximum_length")  # может быть None
+            max_len = col.get("character_maximum_length")
 
+            # пропускаем автоинкрементные поля
+            if name == "id" and default and "nextval" in str(default):
+                continue
+
+            # сохраняем эту инфу
             self.col_info[name] = {
                 "type": dtype,
                 "nullable": nullable,
@@ -109,165 +284,183 @@ class EnterDataDialog(QDialog):
                 "max_length": max_len,
             }
 
-            lbl = QLabel(f"{name} ({dtype})")
+            # создаем контейнер для поля
+            field_frame = QFrame()
+            field_frame.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {CARD_BG};
+                    border: 1px solid {CARD_BORDER};
+                    border-radius: 6px;
+                }}
+            """)
+
+            field_layout = QVBoxLayout(field_frame)
+            field_layout.setContentsMargins(10, 8, 10, 8)
+            field_layout.setSpacing(4)
+
+            # метка поля
+            lbl_text = f"{name} ({dtype})"
             if not nullable:
-                lbl.setStyleSheet("color:#ffaaaa; margin-top:8px;")
-            else:
-                lbl.setStyleSheet("color:#dcdcdc; margin-top:8px;")
-            ly.addWidget(lbl)
+                lbl_text += " *"
 
-            field = None
-            dtype_lower = (dtype or "").lower()
+            lbl = QLabel(lbl_text)
+            lbl.setStyleSheet(f"""
+                color: {'#ffaaaa' if not nullable else TEXT_SOFT};
+            """)
+            field_layout.addWidget(lbl)
 
-            # ---------- ENUM ----------
-            if enum_values:
-                field = QComboBox()
-                field.addItems(enum_values)
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:4px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+            # поле ввода
+            field_widget = self._create_field_widget(name, dtype, nullable, enum_values, max_len, fk_dict)
+            field_layout.addWidget(field_widget)
 
-            # ---------- Внешний ключ ----------
-            if name in fk_dict:
-                ref_table = fk_dict[name]["ref_table"]
-                try:
-                    options = self.db.get_reference_values(ref_table)
-                    field = QComboBox()
-                    for id_, label in options:
-                        field.addItem(f"{id_} — {label}", userData=id_)
-                    field.setStyleSheet("background:#2b2d31; color:#eee; padding:4px;")
-                    ly.addWidget(field)
-                    self.fields[name] = field
-                    continue
-                except Exception as e:
-                    app_logger.error(f"Ошибка загрузки значений из {ref_table}: {e}")
+            self.fields[name] = field_widget
+            self.fields_layout.addWidget(field_frame)
 
-            # ---------- Boolean ----------
-            if dtype_lower == "boolean":
-                field = QComboBox()
-                field.addItems(["true", "false"])
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:4px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+        # Добавляем растяжку
+        self.fields_layout.addStretch()
 
-            # ---------- Массивы ----------
-            if dtype_lower.endswith("[]"):
-                field = QLineEdit()
-                field.setPlaceholderText("Введите значения через запятую")
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+    def _create_field_widget(self, name, dtype, nullable, enum_values, max_len, fk_dict):
+        dtype_lower = (dtype or "").lower()
 
-            # ---------- ЦЕЛЫЕ ЧИСЛА ----------
-            if dtype_lower in ("integer", "int4", "bigint", "smallint"):
-                field = QLineEdit()
-                field.setValidator(QIntValidator(field))
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+        # ENUM
+        if enum_values:
+            combo = QComboBox()
+            combo.addItems(enum_values)
+            self._style_combo(combo)
+            return combo
 
-            # ---------- ВЕЩЕСТВЕННЫЕ ЧИСЛА ----------
-            if dtype_lower in ("numeric", "real", "double precision"):
-                field = QLineEdit()
-                dv = QDoubleValidator(field)
-                dv.setNotation(QDoubleValidator.StandardNotation)
-                field.setValidator(dv)
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+        # внешний ключ
+        if name in fk_dict:
+            ref_table = fk_dict[name]["ref_table"]
+            try:
+                options = self.db.get_reference_values(ref_table)
+                combo = QComboBox()
+                combo.addItem("")  # пустой вариант
+                for id_, label in options:
+                    combo.addItem(f"{id_} — {label}", userData=id_)
+                self._style_combo(combo)
+                return combo
+            except Exception as e:
+                app_logger.error(f"Ошибка загрузки значений из {ref_table}: {e}")
 
-            # ---------- DATE: календарь + ручной ввод с проверкой ----------
-            if dtype_lower == "date":
-                field = QDateEdit()
-                field.setCalendarPopup(True)
-                field.setDisplayFormat("yyyy-MM-dd")
-                field.setDate(QDate.currentDate())
-                # можно и руками, и через календарь
-                field.setToolTip("Выберите дату в календаре или измените вручную (ГГГГ-ММ-ДД)")
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+        # boolean
+        if dtype_lower == "boolean":
+            combo = QComboBox()
+            combo.addItems(["", "true", "false"])
+            self._style_combo(combo)
+            return combo
 
-            # ---------- TIMESTAMP: календарь + время ----------
-            if dtype_lower.startswith("timestamp"):
-                field = QDateTimeEdit()
-                field.setCalendarPopup(True)
-                field.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
-                field.setDateTime(QDateTime.currentDateTime())
-                field.setToolTip("Выберите дату и время в календаре или измените вручную")
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
-                continue
+        # массивы
+        if dtype_lower.endswith("[]"):
+            edit = QLineEdit()
+            edit.setPlaceholderText("Значения через запятую...")
+            self._style_edit(edit)
+            return edit
 
-            # ---------- СТРОКИ: varchar / text / char ----------
-            if dtype_lower in ("character varying", "varchar", "text", "character"):
-                field = QLineEdit()
+        # целые числа
+        if dtype_lower in ("integer", "int4", "bigint", "smallint"):
+            edit = QLineEdit()
+            edit.setValidator(QIntValidator(edit))
+            self._style_edit(edit)
+            return edit
 
-                # лимит длины для varchar/char
-                if max_len is not None:
-                    field.setMaxLength(max_len)
+        # вещественные
+        if dtype_lower in ("numeric", "real", "double precision"):
+            edit = QLineEdit()
+            dv = QDoubleValidator(edit)
+            dv.setNotation(QDoubleValidator.StandardNotation)
+            edit.setValidator(dv)
+            self._style_edit(edit)
+            return edit
 
-                # только буквы для ФИО
-                if name in ("last_name", "first_name", "patronymic"):
-                    regex = QRegularExpression(r"[A-Za-zА-Яа-яЁё\s\- ]+")
-                    field.setValidator(QRegularExpressionValidator(regex, field))
+        # дата
+        if dtype_lower == "date":
+            date_edit = QDateEdit()
+            date_edit.setCalendarPopup(True)
+            date_edit.setDisplayFormat("yyyy-MM-dd")
+            date_edit.setDate(QDate.currentDate())
+            self._style_edit(date_edit)
+            return date_edit
 
-                # паспорт строго в формате 4 цифры + пробел + 6 цифр
-                if name == "passport":
-                    regex = QRegularExpression(r"\d{4} \d{6}")
-                    field.setValidator(QRegularExpressionValidator(regex, field))
-                    # для паспорта всегда жёстко 11 символов: 4 + пробел + 6
-                    field.setMaxLength(11)
+        # временная метка
+        if dtype_lower.startswith("timestamp"):
+            datetime_edit = QDateTimeEdit()
+            datetime_edit.setCalendarPopup(True)
+            datetime_edit.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+            datetime_edit.setDateTime(QDateTime.currentDateTime())
+            self._style_edit(datetime_edit)
+            return datetime_edit
 
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
+        # строки с валидацией
+        if dtype_lower in ("character varying", "varchar", "text", "character"):
+            edit = QLineEdit()
 
-            else:
-                # ---------- всё остальное — обычное поле ----------
-                field = QLineEdit()
-                field.setStyleSheet("background:#2b2d31; color:#eee; padding:6px;")
-                ly.addWidget(field)
-                self.fields[name] = field
+            if max_len is not None:
+                edit.setMaxLength(max_len)
 
-            # placeholder для DEFAULT
-            if default is not None:
-                field.setPlaceholderText(f"По умолчанию: {default}")
+            # валидация для специальных полей
+            if name in ("last_name", "first_name", "patronymic"):
+                regex = QRegularExpression(r"[A-Za-zА-Яа-яЁё\s\- ]+")
+                edit.setValidator(QRegularExpressionValidator(regex, edit))
 
-    # ----------------------------------------------------------------------
-    # save
-    # ----------------------------------------------------------------------
+            if name == "passport":
+                regex = QRegularExpression(r"\d{4} \d{6}")
+                edit.setValidator(QRegularExpressionValidator(regex, edit))
+                edit.setMaxLength(11)
+
+            self._style_edit(edit)
+            return edit
+
+        # обычное текстовое поле
+        edit = QLineEdit()
+        self._style_edit(edit)
+        return edit
+
+    def _style_edit(self, widget):
+        widget.setStyleSheet(f"""
+            background-color: {CENTRAL_BG};
+            color: {TEXT_MAIN};
+            border: 1px solid {CARD_BORDER};
+            border-radius: 4px;
+            padding: 6px;
+        """)
+
+    def _style_combo(self, widget):
+        widget.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                border-radius: 4px;
+                padding: 6px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                selection-background-color: {ACCENT_PRIMARY};
+            }}
+        """)
 
     def _on_save(self):
-        table = self.ui.table_selector.currentText()
+        table = self.table_selector.currentText()
         if not table:
             QMessageBox.warning(self, "Ошибка", "Выберите таблицу.")
             return
 
         try:
-            row = self._collect_data()
-            self.db.insert_row(table, row)
+            row_data = self._collect_data()
+            self.db.insert_row(table, row_data)
+
             QMessageBox.information(self, "Готово", "Строка успешно добавлена.")
-            app_logger.info(f"INSERT INTO {table}: {row}")
+            app_logger.info(f"INSERT INTO {table}: {row_data}")
             self.accept()
 
         except Exception as e:
-            app_logger.error(e)
+            app_logger.error(f"Ошибка вставки: {e}")
             QMessageBox.critical(self, "Ошибка", f"Вставка не выполнена:\n{e}")
 
-    # ----------------------------------------------------------------------
-    # data collector
-    # ----------------------------------------------------------------------
-
     def _collect_data(self):
-        """Сбор значений из полей с учётом типов, NULL, DEFAULT и т.д."""
         result = {}
 
         for name, widget in self.fields.items():
@@ -277,87 +470,82 @@ class EnterDataDialog(QDialog):
             default = info["default"]
             enum_values = info["enum_values"]
 
-            # забираем текст из виджетов
+            # получаем значение в зависимости от типа виджета
             if isinstance(widget, QLineEdit):
-                text = widget.text().strip()
+                value = widget.text().strip()
             elif isinstance(widget, QComboBox):
-                text = widget.currentText().strip()
+                value = widget.currentText().strip()
             elif isinstance(widget, QDateEdit):
-                # DATE
-                text = widget.date().toString("yyyy-MM-dd")
+                value = widget.date().toString("yyyy-MM-dd")
             elif isinstance(widget, QDateTimeEdit):
-                # TIMESTAMP
-                text = widget.dateTime().toString("yyyy-MM-dd HH:mm:ss")
+                value = widget.dateTime().toString("yyyy-MM-dd HH:mm:ss")
             else:
-                text = ""
+                value = ""
 
-            # userData нужно для внешних ключей (там лежит сам id)
-            current_data = None
-            if isinstance(widget, QComboBox):
-                current_data = widget.currentData()
-
-            # ---------- пустое значение ----------
-            if text == "":
-                # если есть DEFAULT → вообще не включаем поле в INSERT
-                if default is not None:
+            # обработка пустых значений
+            if not value:
+                if not nullable and default is None:
+                    raise ValueError(f"Поле '{name}' обязательно для заполнения")
+                elif default is not None:
+                    result[name] = default # используем значение по умолчанию
                     continue
-
-                # NULL допустим
-                if nullable:
+                else:
                     result[name] = None
                     continue
 
-                # NOT NULL и нет default → ошибка
-                raise ValueError(f"Поле '{name}' обязательно (NOT NULL)")
-
             dtype_lower = (dtype or "").lower()
 
-            # ---------- ENUM ----------
+            # преобразование типов данных
             if enum_values:
-                if text not in enum_values:
-                    raise ValueError(f"Недопустимое значение ENUM для '{name}'")
-                result[name] = text
+                if value not in enum_values:
+                    raise ValueError(f"Недопустимое значение ENUM для '{name}': "
+                                     f"'{value}'. Допустимые значения: {enum_values}")
+                result[name] = value
                 continue
 
-            # ---------- массивы ----------
-            if dtype_lower.endswith("[]"):
-                arr = [x.strip() for x in text.split(",") if x.strip()]
-                result[name] = arr
-                continue
+            elif dtype_lower.endswith("[]"):
+                # массивы
+                if value:  # проверяем, что строка не пустая
+                    arr = [x.strip() for x in value.split(",") if x.strip()]
+                    result[name] = arr
+                else:
+                    result[name] = []  # пустой массив
 
-            # ---------- целые числа ----------
-            if dtype_lower in ("integer", "int4", "bigint", "smallint"):
-                # для FK в комбобоксе в userData лежит id
-                value = current_data if current_data is not None else text
+            elif dtype_lower in ("integer", "int4", "bigint", "smallint"):
+                # целые числа
                 try:
                     result[name] = int(value)
-                except Exception:
+                except ValueError:
                     raise ValueError(f"Поле '{name}' должно быть целым числом")
-                continue
 
-            # ---------- числа с плавающей запятой ----------
-            if dtype_lower in ("numeric", "real", "double precision"):
-                value = current_data if current_data is not None else text
+            elif dtype_lower in ("numeric", "real", "double precision"):
+                # вещественные числа
                 try:
-                    result[name] = float(str(value).replace(",", "."))
-                except Exception:
+                    result[name] = float(value.replace(",", "."))
+                except ValueError:
                     raise ValueError(f"Поле '{name}' должно быть числом")
-                continue
 
-            # ---------- boolean ----------
-            if dtype_lower == "boolean":
-                low = text.lower()
-                if low in ("true", "t", "1", "yes", "y", "да"):
+            elif dtype_lower == "boolean":
+                # логические значения
+                value_lower = value.lower()
+                if value_lower in ("true", "t", "1", "yes", "y", "да"):
                     result[name] = True
-                elif low in ("false", "f", "0", "no", "n", "нет"):
+                elif value_lower in ("false", "f", "0", "no", "n", "нет"):
                     result[name] = False
                 else:
-                    raise ValueError(
-                        f"Поле '{name}' (boolean) принимает значения true/false"
-                    )
-                continue
+                    raise ValueError(f"Поле '{name}' принимает значения true/false")
 
-            # ---------- строки и остальное ----------
-            result[name] = text
+            else:
+                # строки и прочие типы
+                result[name] = value
 
         return result
+
+    def refresh_tables(self):
+        current_table = self.table_selector.currentText()
+        self._load_tables()
+
+        # пытаемся восстановить выбор таблицы
+        if current_table and current_table in [self.table_selector.itemText(i)
+                                               for i in range(self.table_selector.count())]:
+            self.table_selector.setCurrentText(current_table)

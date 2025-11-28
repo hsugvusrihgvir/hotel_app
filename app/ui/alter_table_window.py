@@ -7,12 +7,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from app.log.log import app_logger
-
+from app.ui.theme import *
 
 def setup_wide_combo(cmb: QComboBox, min_chars: int = 18, popup_width: int = 260):
-    """
-    Настройки для комбобоксов с длинными названиями колонок.
-    """
     cmb.setMinimumContentsLength(min_chars)
     cmb.setSizeAdjustPolicy(QComboBox.AdjustToContents)
     cmb.setMinimumWidth(popup_width)
@@ -20,78 +17,156 @@ def setup_wide_combo(cmb: QComboBox, min_chars: int = 18, popup_width: int = 260
 
 
 def style_button(btn: QPushButton):
-    """Ограничиваем ширину, чтобы кнопки не растягивались на весь ряд."""
     btn.setMinimumWidth(150)
     btn.setMaximumWidth(190)
+    btn.setStyleSheet(
+        f"""
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border: 1px solid {BTN_BORDER};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 14px;
+                font-weight: 500;
+                min-height: 20px;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:disabled {{
+                background-color: #252937;
+                color: #9CA3AF;
+                border-color: #3A4257;
+            }}
+        """
+    )
 
 
 class AlterTableWindow(QDialog):
-    """Окно изменения структуры таблиц: столбцы, ключи, UNIQUE / FK / CHECK."""
-
     def __init__(self, db, parent=None):
         super().__init__(parent)
         self.db = db
 
         self.setWindowTitle("Изменение структуры таблиц")
-        # поуже, но высокое окно
-        self.resize(880, 680)
+        self.resize(1000, 680)
 
         # числовые колонки текущей таблицы (для простых CHECK)
         self.numeric_cols: list[str] = []
-
-        # мягкая тёмная тема + пастельные кнопки
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #111217;
-                color: #e5e7eb;
-            }
-            QGroupBox {
-                border: 1px solid #2f3543;
-                border-radius: 8px;
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {WINDOW_BG};
+                color: {TEXT_MAIN};
+            }}
+            QGroupBox {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                border: 5px solid {CARD_BORDER};
+                border-radius: 12px;
+                border-right: 0.5px solid {ACCENT_PRIMARY};
                 margin-top: 18px;
                 padding: 10px 10px 14px 10px;
-                background-color: #171a23;
-                font-weight: 500;
-            }
-            QGroupBox::title {
+                font-weight: bold;
+                font-size: 16px;
+            }}
+            QGroupBox::title {{
                 subcontrol-origin: margin;
                 left: 12px;
                 padding: 0 6px;
-                background-color: #171a23;
-            }
-            QPushButton {
-                background-color: #4f8cc9;   /* мягкий голубой */
-                color: #f9fafb;
+                background-color: {CARD_BG};
+                color: {ACCENT_PRIMARY};
+                font-weight: bold;
+            }}
+            QTableWidget {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                gridline-color: #404040;
+                border: 1px solid {CARD_BORDER};
+                border-radius: 8px;
+            }}
+            QTableWidget::item {{
+                padding: 6px;
+                border-bottom: 1px solid {CARD_BORDER};
+            }}
+            QTableWidget::item:selected {{
+                background-color: {ACCENT_PRIMARY};
+                color: {WINDOW_BG};
+                font-weight: bold;
+            }}
+            QHeaderView::section {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                padding: 8px;
                 border: none;
+                border-right: 1px solid {CARD_BORDER};
+                border-bottom: 1px solid {CARD_BORDER};
+                font-weight: bold;
+            }}
+            QLineEdit, QComboBox {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 2px solid {CARD_BORDER};
                 border-radius: 6px;
-                padding: 4px 10px;
-            }
-            QPushButton:hover {
-                background-color: #3e74ab;
-            }
-            QPushButton:disabled {
-                background-color: #4b5563;
-            }
-            QTableWidget {
-                background-color: #050814;
-                gridline-color: #374151;
-            }
-            QHeaderView::section {
-                background-color: #111827;
-                padding: 3px 4px;
-                border: 1px solid #272b38;
-            }
-            QLineEdit, QComboBox {
-                background-color: #050814;
-                border: 1px solid #4b5563;
+                padding: 6px 10px;
+                font-size: 13px;
+                selection-background-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit:focus, QComboBox:focus {{
+                border-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit::placeholder {{
+                color: {TEXT_MUTED};
+                font-style: italic;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                selection-background-color: {ACCENT_PRIMARY};
+                selection-color: {WINDOW_BG};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox::down-arrow {{
+                border: none;
+                width: 12px;
+                height: 12px;
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 2px;
+            }}
+            QLabel {{
+                color: {TEXT_SOFT};
+                font-weight: bold;
+                font-size: 12px;
+            }}
+            QScrollArea {{
+                background-color: {WINDOW_BG};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {CARD_BG};
+                width: 8px;
                 border-radius: 4px;
-                padding: 2px 4px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #050814;
-                selection-background-color: #3e74ab;
-                selection-color: #f9fafb;
-            }
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {ACCENT_SUCCESS};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+                height: 0px;
+            }}
         """)
 
         self._build_ui()
@@ -100,9 +175,6 @@ class AlterTableWindow(QDialog):
         if self.cb_table.count() > 0:
             self._load_table_info()
 
-    # =====================================================================
-    # UI
-    # =====================================================================
 
     def _build_ui(self):
         # основной layout с прокруткой
@@ -115,18 +187,19 @@ class AlterTableWindow(QDialog):
         main_layout.addWidget(scroll)
 
         container = QWidget()
+        container.setStyleSheet(f"background-color: {WINDOW_BG};")
         scroll.setWidget(container)
 
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(18)  # расстояние между блоками
 
-        # -------------------- выбор таблицы --------------------
+        # выбор таблицы
         top_row = QHBoxLayout()
         layout.addLayout(top_row)
 
-        lbl_table = QLabel("Таблица:")
-        lbl_table.setFont(QFont("", 10, QFont.Bold))
+        lbl_table = QLabel("Таблица для просмотра:")
+        lbl_table.setFont(QFont("", 16, QFont.Bold))
         top_row.addWidget(lbl_table)
 
         self.cb_table = QComboBox()
@@ -139,12 +212,17 @@ class AlterTableWindow(QDialog):
         self.btn_reload.clicked.connect(self._load_tables)
         top_row.addWidget(self.btn_reload)
 
-        # -------------------- таблица колонок -----------------
+        # таблица колонок
         self.tbl_columns = QTableWidget()
         self.tbl_columns.setColumnCount(4)
-        self.tbl_columns.setHorizontalHeaderLabels(["Имя", "Тип", "NULL?", "DEFAULT"])
+        self.tbl_columns.setHorizontalHeaderLabels(["Имя столбца", "Тип", "Mожет быть NULL", "DEFAULT"])
         self.tbl_columns.verticalHeader().setVisible(False)
-        self.tbl_columns.setMinimumHeight(160)
+        self.tbl_columns.setMinimumHeight(200)
+
+        # лок редактирования и выделение
+        self.tbl_columns.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.tbl_columns.setSelectionBehavior(QTableWidget.SelectRows)
+
         header = self.tbl_columns.horizontalHeader()
         header.setStretchLastSection(True)
         header.setSectionResizeMode(QHeaderView.Stretch)
@@ -158,9 +236,7 @@ class AlterTableWindow(QDialog):
             ly.setSpacing(6)
             return gb, ly
 
-        # ==================== Колонки ====================
 
-        # ---- Добавить столбец ----
         gb_add, ly_add_v = make_group("Добавить столбец")
 
         row_add1 = QHBoxLayout()
@@ -172,19 +248,35 @@ class AlterTableWindow(QDialog):
         row_add2 = QHBoxLayout()
         self.le_add_type = QLineEdit()
         self.le_add_type.setPlaceholderText("тип данных, например VARCHAR(50)")
+
+        row_add2.addWidget(QLabel("Тип:"))
+        row_add2.addWidget(self.le_add_type)
+
+        row_add3 = QHBoxLayout()
+        self.cb_add_null = QComboBox()
+        self.cb_add_null.addItems(["YES", "NO"])
+        self.cb_add_null.setCurrentText("YES")
+
+        self.le_add_default = QLineEdit()
+        self.le_add_default.setPlaceholderText("None")
+
+        row_add3.addWidget(QLabel("NULL:"))
+        row_add3.addWidget(self.cb_add_null)
+        row_add3.addWidget(QLabel("DEFAULT:"))
+        row_add3.addWidget(self.le_add_default, 1)
         self.btn_add_col = QPushButton("Добавить")
         style_button(self.btn_add_col)
         self.btn_add_col.clicked.connect(self._add_column)
 
-        row_add2.addWidget(QLabel("Тип:"))
-        row_add2.addWidget(self.le_add_type)
-        row_add2.addWidget(self.btn_add_col, 0, Qt.AlignRight)
+        row_add3.addStretch(1)  # отодвигаем вправо
+        row_add3.addWidget(self.btn_add_col)
 
         ly_add_v.addLayout(row_add1)
         ly_add_v.addLayout(row_add2)
+        ly_add_v.addLayout(row_add3)
         layout.addWidget(gb_add)
 
-        # ---- Удалить столбец ----
+
         gb_drop, ly_drop_v = make_group("Удалить столбец")
 
         row_drop1 = QHBoxLayout()
@@ -196,12 +288,13 @@ class AlterTableWindow(QDialog):
 
         row_drop1.addWidget(QLabel("Столбец:"))
         row_drop1.addWidget(self.cb_drop_col)
-        row_drop1.addWidget(self.btn_drop_col, 0, Qt.AlignRight)
+        row_drop1.addStretch(1)
+        row_drop1.addWidget(self.btn_drop_col)
 
         ly_drop_v.addLayout(row_drop1)
         layout.addWidget(gb_drop)
 
-        # ---- Переименовать таблицу ----
+
         gb_rt, ly_rt_v = make_group("Переименовать таблицу")
 
         row_rt1 = QHBoxLayout()
@@ -218,7 +311,7 @@ class AlterTableWindow(QDialog):
         ly_rt_v.addLayout(row_rt1)
         layout.addWidget(gb_rt)
 
-        # ---- Переименовать столбец ----
+
         gb_rc, ly_rc_v = make_group("Переименовать столбец")
 
         row_rc1 = QHBoxLayout()
@@ -226,6 +319,7 @@ class AlterTableWindow(QDialog):
         setup_wide_combo(self.cb_rename_col)
         row_rc1.addWidget(QLabel("Столбец:"))
         row_rc1.addWidget(self.cb_rename_col)
+        row_rc1.addStretch(1)
 
         row_rc2 = QHBoxLayout()
         self.le_new_col_name = QLineEdit()
@@ -242,14 +336,15 @@ class AlterTableWindow(QDialog):
         ly_rc_v.addLayout(row_rc2)
         layout.addWidget(gb_rc)
 
-        # ---- Изменить тип столбца ----
         gb_type, ly_type_v = make_group("Изменить тип столбца")
 
         row_type1 = QHBoxLayout()
         self.cb_type_col = QComboBox()
         setup_wide_combo(self.cb_type_col)
+
         row_type1.addWidget(QLabel("Столбец:"))
         row_type1.addWidget(self.cb_type_col)
+        row_type1.addStretch(1)
 
         row_type2 = QHBoxLayout()
 
@@ -290,15 +385,14 @@ class AlterTableWindow(QDialog):
 
         row_type2.addWidget(QLabel("Новый тип:"))
         row_type2.addWidget(self.cb_new_type)
-        row_type2.addWidget(self.btn_type, 0, Qt.AlignRight)
+        row_type2.addStretch(1)
+        row_type2.addWidget(self.btn_type)
 
         ly_type_v.addLayout(row_type1)
         ly_type_v.addLayout(row_type2)
         layout.addWidget(gb_type)
 
-        # ==================== NOT NULL / UNIQUE ====================
 
-        # ---- NOT NULL ----
         gb_nn, ly_nn_v = make_group("NOT NULL")
 
         row_nn1 = QHBoxLayout()
@@ -307,7 +401,6 @@ class AlterTableWindow(QDialog):
         row_nn1.addWidget(QLabel("Столбец:"))
         row_nn1.addWidget(self.cb_not_null_col)
 
-        row_nn2 = QHBoxLayout()
         self.btn_set_not_null = QPushButton("SET NOT NULL")
         style_button(self.btn_set_not_null)
         self.btn_drop_not_null = QPushButton("DROP NOT NULL")
@@ -316,15 +409,14 @@ class AlterTableWindow(QDialog):
         self.btn_set_not_null.clicked.connect(self._set_not_null)
         self.btn_drop_not_null.clicked.connect(self._drop_not_null)
 
-        row_nn2.addStretch(1)
-        row_nn2.addWidget(self.btn_set_not_null)
-        row_nn2.addWidget(self.btn_drop_not_null)
+        row_nn1.addStretch(1)
+        row_nn1.addWidget(self.btn_set_not_null)
+        row_nn1.addWidget(self.btn_drop_not_null)
 
         ly_nn_v.addLayout(row_nn1)
-        ly_nn_v.addLayout(row_nn2)
         layout.addWidget(gb_nn)
 
-        # ---- UNIQUE ----
+
         gb_u, ly_u_v = make_group("UNIQUE")
 
         row_u1 = QHBoxLayout()
@@ -332,6 +424,7 @@ class AlterTableWindow(QDialog):
         setup_wide_combo(self.cb_unique_col)
         row_u1.addWidget(QLabel("Столбец:"))
         row_u1.addWidget(self.cb_unique_col)
+        row_u1.addStretch(1)
 
         row_u2 = QHBoxLayout()
         self.le_unique_name = QLineEdit()
@@ -353,6 +446,7 @@ class AlterTableWindow(QDialog):
 
         row_u3.addWidget(QLabel("Существующие:"))
         row_u3.addWidget(self.cb_unique_drop)
+        row_u3.addStretch(1)
         row_u3.addWidget(self.btn_drop_unique, 0, Qt.AlignRight)
 
         ly_u_v.addLayout(row_u1)
@@ -360,7 +454,6 @@ class AlterTableWindow(QDialog):
         ly_u_v.addLayout(row_u3)
         layout.addWidget(gb_u)
 
-        # ==================== FOREIGN KEY ====================
 
         gb_fk, ly_fk_v = make_group("FOREIGN KEY")
 
@@ -374,8 +467,10 @@ class AlterTableWindow(QDialog):
 
         row_fk1.addWidget(QLabel("Локальный столбец:"))
         row_fk1.addWidget(self.cb_fk_local_col)
+        row_fk1.addStretch(1)
         row_fk1.addWidget(QLabel("Таблица-ссылка:"))
         row_fk1.addWidget(self.cb_fk_ref_table)
+        row_fk1.addStretch(1)
 
         # строка 2 — столбец ссылки + ON DELETE/UPDATE + кнопка
         row_fk2 = QHBoxLayout()
@@ -393,10 +488,16 @@ class AlterTableWindow(QDialog):
 
         row_fk2.addWidget(QLabel("Столбец-ссылка:"))
         row_fk2.addWidget(self.cb_fk_ref_col)
-        row_fk2.addWidget(QLabel("ON DELETE"))
+        lbl_on_delete = QLabel("    ON DELETE")
+        lbl_on_delete.setStyleSheet(f"color: {ACCENT_SUCCESS}; font-weight: bold;")
+        row_fk2.addWidget(lbl_on_delete)
         row_fk2.addWidget(self.cb_fk_on_delete)
-        row_fk2.addWidget(QLabel("ON UPDATE"))
+        row_fk2.addStretch(1)
+        lbl_on_update = QLabel("ON UPDATE")
+        lbl_on_update.setStyleSheet(f"color: {ACCENT_SUCCESS}; font-weight: bold;")
+        row_fk2.addWidget(lbl_on_update)
         row_fk2.addWidget(self.cb_fk_on_update)
+        row_fk2.addStretch(1)
         row_fk2.addWidget(self.btn_add_fk, 0, Qt.AlignRight)
 
         # строка 3 — удаление FK
@@ -409,6 +510,7 @@ class AlterTableWindow(QDialog):
 
         row_fk3.addWidget(QLabel("Существующие FK:"))
         row_fk3.addWidget(self.cb_fk_drop)
+        row_fk3.addStretch(1)
         row_fk3.addWidget(self.btn_drop_fk, 0, Qt.AlignRight)
 
         ly_fk_v.addLayout(row_fk1)
@@ -416,7 +518,7 @@ class AlterTableWindow(QDialog):
         ly_fk_v.addLayout(row_fk3)
         layout.addWidget(gb_fk)
 
-        # ==================== CHECK ====================
+
 
         gb_check, ly_check_v = make_group("CHECK-ограничения")
 
@@ -439,6 +541,8 @@ class AlterTableWindow(QDialog):
         self.le_check_name.setPlaceholderText("имя CHECK (опционально)")
         self.btn_add_simple_check = QPushButton("Добавить простое CHECK")
         style_button(self.btn_add_simple_check)
+        self.btn_add_simple_check.setMinimumWidth(200)
+        self.btn_add_simple_check.setMaximumWidth(250)
         self.btn_add_simple_check.clicked.connect(self._add_simple_check)
 
         row_simple2.addWidget(QLabel("Имя:"))
@@ -462,6 +566,8 @@ class AlterTableWindow(QDialog):
         )
         self.btn_add_custom_check = QPushButton("Добавить произвольный CHECK")
         style_button(self.btn_add_custom_check)
+        self.btn_add_custom_check.setMinimumWidth(200)
+        self.btn_add_custom_check.setMaximumWidth(250)
         self.btn_add_custom_check.clicked.connect(self._add_custom_check)
 
         row_custom.addWidget(self.le_check_custom_expr, 1)
@@ -486,9 +592,7 @@ class AlterTableWindow(QDialog):
         layout.addWidget(gb_check)
         layout.addStretch(1)
 
-    # =====================================================================
-    # Загрузка информации
-    # =====================================================================
+
 
     def _load_tables(self):
         try:
@@ -586,7 +690,7 @@ class AlterTableWindow(QDialog):
         self.cb_fk_ref_col.addItems([c.get("column_name") for c in cols])
 
     def _load_constraints(self):
-        """UNIQUE, CHECK, FK для выбранной таблицы."""
+        #UNIQUE, CHECK, FK для выбранной таблицы
         table = self.cb_table.currentText()
         if not table:
             return
@@ -697,21 +801,30 @@ class AlterTableWindow(QDialog):
             # полный текст в тултипе
             self.cb_check_drop.setItemData(idx, f"{name}: {clause}", Qt.ToolTipRole)
 
-    # =====================================================================
-    # Операции ALTER TABLE
-    # =====================================================================
 
+    # операции ALTER TABLE
     def _add_column(self):
         table = self.cb_table.currentText()
         name = self.le_add_name.text().strip()
         col_type = self.le_add_type.text().strip()
+        nullable = self.cb_add_null.currentText()
+        default = self.le_add_default.text().strip()
 
         if not table or not name or not col_type:
             QMessageBox.warning(self, "Внимание", "Укажите таблицу, имя и тип столбца.")
             return
 
-        sql = f'ALTER TABLE public."{table}" ADD COLUMN "{name}" {col_type};'
+        sql_parts = [f'ALTER TABLE public."{table}" ADD COLUMN "{name}" {col_type}']
+        # если указано
+        if nullable == "NO":
+            sql_parts.append("NOT NULL")
+        if default:
+            sql_parts.append(f"DEFAULT {default}")
+
+        sql = " ".join(sql_parts) + ";"
+
         self._execute(sql, f"Столбец {name} добавлен.")
+
 
     def _drop_column(self):
         table = self.cb_table.currentText()
@@ -861,10 +974,10 @@ class AlterTableWindow(QDialog):
         self._execute(sql, f"FK {name} удалён.")
         self._load_constraints()
 
-    # ------------------------- CHECK -------------------------
+    # CHECK
 
     def _add_simple_check(self):
-        """Простое ограничение: одна колонка, один оператор, одно число."""
+        # одна колонка, один оператор, одно число
         table = self.cb_table.currentText()
         col = self.cb_check_col.currentText()
         op = (self.cb_check_op1.currentText() or "").strip()
@@ -901,7 +1014,7 @@ class AlterTableWindow(QDialog):
         self._load_constraints()
 
     def _add_custom_check(self):
-        """Произвольное выражение, которое пользователь вводит руками."""
+        # пользователь вводит руками
         table = self.cb_table.currentText()
         expr = (self.le_check_custom_expr.text() or "").strip()
         name = self.le_check_name.text().strip()
@@ -939,9 +1052,6 @@ class AlterTableWindow(QDialog):
         self._execute(sql, f"CHECK {name} удалён.")
         self._load_constraints()
 
-    # =====================================================================
-    # SQL exec helper
-    # =====================================================================
 
     def _execute(self, sql: str, msg: str):
         try:
