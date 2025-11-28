@@ -1,63 +1,89 @@
-# ui_main_window.py — правильный UI-класс для QMainWindow
 from PySide6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QGridLayout,
-    QPushButton, QLabel, QFrame, QSizePolicy, QWidget
+    QVBoxLayout, QGridLayout, QPushButton,
+    QLabel, QFrame, QSizePolicy, QWidget
 )
 from PySide6.QtGui import QFont, QColor, QPalette
 from PySide6.QtCore import Qt
 
+# цветовая палитра
+# базовые фоны
+WINDOW_BG = "#050816" # тёмный фон окна
+CENTRAL_BG = "#020617" # фон центральной области
+CARD_BG = "#111421" # фон карточек
+CARD_BORDER = "#111827" # границы карточек
 
+# текст
+TEXT_MAIN = "#E5E7EB" # основной текст
+TEXT_MUTED = "#9CA3AF" # подписи
+TEXT_SOFT = "#CBD5F5" # заголовки
+
+# акцентные цвета
+ACCENT_PRIMARY = "#A5B4FC" # schema
+ACCENT_SUCCESS = "#6EE7B7" # data
+ACCENT_WARNING = "#FCD59F" # alter
+
+# базовые кнопки
+BTN_BG = "#1f202e" # фон нормальной кнопки
+BTN_BG_HOVER = "#1F2937" # фон при наведении
+BTN_BG_PRESSED = "#020617" # фон при нажатии
+BTN_BORDER = "#1F2937" # граница кнопки
+BTN_TEXT = "#E5E7EB" # текст на кнопке
+
+# кнопка опасного действия
+DANGER_BG = "#B96B6B"
+DANGER_BG_HOVER = "#A95B5B"
+DANGER_BG_PRESSED = "#8A4545"
+DANGER_BORDER = "#9A5555"
+DANGER_TEXT = "#FFF5F5"
+
+# главное меню
 class UIMainWindow(object):
-    """генератор UI для главного окна"""
-
     def setup_ui(self, MainWindow):
         MainWindow.setWindowTitle("AI-DDOS Lab — DB Manager")
         MainWindow.resize(960, 620)
-        self._apply_dark_theme(MainWindow)
+
+        self._apply_dark_theme(MainWindow)  # базовые цвета
 
         central = QWidget()
         MainWindow.setCentralWidget(central)
+        central.setStyleSheet(f"background-color: {CENTRAL_BG};")
 
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(20)
 
-        # -------- header --------
         header = QLabel("Управление базой данных")
         header.setFont(QFont("Segoe UI", 20, QFont.Bold))
         header.setAlignment(Qt.AlignLeft)
-        header.setStyleSheet("color: #e0e0e0;")
+        header.setStyleSheet(f"color: {TEXT_SOFT};")
         main_layout.addWidget(header)
 
-        # -------- блок 1: операции со схемой --------
-        schema_frame = self._block("Работа со схемой", kind="primary")
-        schema_layout = schema_frame.layout()
+        # блок 1
+        structure_frame = self._block("База и структура ツ", kind="primary")
+        structure_layout = structure_frame.layout()
 
-        schema_grid = QGridLayout()
-        schema_grid.setHorizontalSpacing(12)
-        schema_grid.setVerticalSpacing(8)
-        schema_layout.addLayout(schema_grid)
+        structure_grid = QGridLayout()
+        structure_grid.setHorizontalSpacing(12)
+        structure_grid.setVerticalSpacing(8)
+        structure_layout.addLayout(structure_grid)
 
         self.btn_create_schema = self._button("Создать схему и таблицы")
-        self.btn_reset_schema = self._button_danger("Сбросить базу")
+        self.btn_alter = self._button("Изменить структуру")
         self.btn_types = self._button("Пользовательские типы")
-        self.btn_views = self._button("Представления и CTE")
-        self.btn_cte_builder = self._button("Создать CTE (подзапрос)")
+        self.btn_reset_schema = self._button_danger("Сбросить базу")
 
-        # раскладка по сетке 2×3
-        # 1 ряд
-        schema_grid.addWidget(self.btn_create_schema, 0, 0)
-        schema_grid.addWidget(self.btn_reset_schema, 0, 1)
-        # 2 ряд
-        schema_grid.addWidget(self.btn_types, 1, 0)
-        schema_grid.addWidget(self.btn_views, 1, 1)
-        # 3 ряд — кнопка на всю ширину
-        schema_grid.addWidget(self.btn_cte_builder, 2, 0, 1, 2)
+        # ряд 1
+        structure_grid.addWidget(self.btn_create_schema, 0, 0)
+        structure_grid.addWidget(self.btn_alter, 0, 1)
 
-        main_layout.addWidget(schema_frame)
+        # ряд 2
+        structure_grid.addWidget(self.btn_types, 1, 0)
+        structure_grid.addWidget(self.btn_reset_schema, 1, 1)
 
-        # -------- блок 2: операции с данными --------
-        data_frame = self._block("Работа с данными", kind="success")
+        main_layout.addWidget(structure_frame)
+
+        # блок 2
+        data_frame = self._block("Работа с данными \(^-^)/", kind="success")
         data_layout = data_frame.layout()
 
         data_grid = QGridLayout()
@@ -69,85 +95,103 @@ class UIMainWindow(object):
         self.btn_add_data = self._button("Внести данные")
         self.btn_show_data = self._button("Показать данные")
 
-        # 1 ряд
+        # ряд 1
         data_grid.addWidget(self.btn_quick_view, 0, 0)
         data_grid.addWidget(self.btn_add_data, 0, 1)
-        # 2 ряд — на всю ширину
+        # ряд 2
         data_grid.addWidget(self.btn_show_data, 1, 0, 1, 2)
 
         main_layout.addWidget(data_frame)
 
-        # -------- блок 3: ALTER TABLE --------
-        alter_frame = self._block("ALTER TABLE", kind="warning")
-        self.btn_alter = self._button("Изменить структуру")
-        alter_frame.layout().addWidget(self.btn_alter)
-        main_layout.addWidget(alter_frame)
+        # блок 3
+        queries_frame = self._block("Запросы и представления (✿◠‿◠)", kind="warning")
+        queries_layout = queries_frame.layout()
 
-        # -------- footer --------
-        footer = QLabel("MLOps Mini-System • PostgreSQL • PySide6")
+        queries_grid = QGridLayout()
+        queries_grid.setHorizontalSpacing(12)
+        queries_grid.setVerticalSpacing(8)
+        queries_layout.addLayout(queries_grid)
+
+        self.btn_views = self._button("Представления и CTE")
+        self.btn_cte_builder = self._button("Создать CTE (подзапрос)")
+
+        queries_grid.addWidget(self.btn_views, 0, 0)
+        queries_grid.addWidget(self.btn_cte_builder, 0, 1)
+
+        main_layout.addWidget(queries_frame)
+
+
+        footer = QLabel("	(╯°□°)╯︵ ┻━┻     	╰( ͡° ͜ʖ ͡° )つ──☆*:・ﾟ     	(◔_◔)")
         footer.setAlignment(Qt.AlignCenter)
-        footer.setStyleSheet("color: #777; font-size: 12px; margin-top: 20px;")
+        footer.setStyleSheet(
+            f"color: {TEXT_MUTED}; font-size: 12px; margin-top: 20px;"
+        )
         main_layout.addWidget(footer)
 
-        schema_frame.layout().setAlignment(Qt.AlignCenter)
+        structure_frame.layout().setAlignment(Qt.AlignCenter)
         data_frame.layout().setAlignment(Qt.AlignCenter)
-        alter_frame.layout().setAlignment(Qt.AlignCenter)
+        queries_frame.layout().setAlignment(Qt.AlignCenter)
 
-        # И сами кнопки
-        self.btn_create_schema.setMaximumWidth(260)
-        self.btn_reset_schema.setMaximumWidth(260)
-        self.btn_types.setMaximumWidth(260)
-        self.btn_views.setMaximumWidth(260)
-        self.btn_cte_builder.setMaximumWidth(260)
+        # ограничения по ширине для кнопок
+        for btn in (
+                self.btn_create_schema,
+                self.btn_alter,
+                self.btn_types,
+                self.btn_reset_schema,
+                self.btn_quick_view,
+                self.btn_add_data,
+                self.btn_show_data,
+                self.btn_views,
+                self.btn_cte_builder,
+        ):
+            btn.setMaximumWidth(260)
 
-        self.btn_quick_view.setMaximumWidth(260)
-        self.btn_add_data.setMaximumWidth(260)
-        self.btn_show_data.setMaximumWidth(260)
-        self.btn_alter.setMaximumWidth(260)
-
-
-    # =======================
-    # helpers
-    # =======================
-
+    # базовые цвета
     def _apply_dark_theme(self, MainWindow):
-        """тёмная палитра"""
         palette = QPalette()
-        palette.setColor(QPalette.Window, QColor(20, 22, 25))
-        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
-        palette.setColor(QPalette.Base, QColor(30, 32, 36))
-        palette.setColor(QPalette.Button, QColor(45, 47, 52))
-        palette.setColor(QPalette.ButtonText, QColor(240, 240, 240))
-        palette.setColor(QPalette.Text, QColor(230, 230, 230))
-        palette.setColor(QPalette.Highlight, QColor(60, 90, 200))
-        palette.setColor(QPalette.HighlightedText, QColor(255, 255, 255))
+        palette.setColor(QPalette.Window, QColor(WINDOW_BG))
+        palette.setColor(QPalette.WindowText, QColor(TEXT_MAIN))
+        palette.setColor(QPalette.Base, QColor(CENTRAL_BG))
+        palette.setColor(QPalette.AlternateBase, QColor(CARD_BG))
+        palette.setColor(QPalette.Button, QColor(BTN_BG))
+        palette.setColor(QPalette.ButtonText, QColor(BTN_TEXT))
+        palette.setColor(QPalette.Text, QColor(TEXT_MAIN))
+        palette.setColor(QPalette.Highlight, QColor(ACCENT_PRIMARY))
+        palette.setColor(QPalette.HighlightedText, QColor(WINDOW_BG))
+
         MainWindow.setPalette(palette)
-        MainWindow.setStyleSheet("background-color: #141618;")
+        MainWindow.setStyleSheet(
+            f"""
+            QMainWindow {{
+                background-color: {WINDOW_BG};
+                color: {TEXT_MAIN};
+            }}
+        """
+        )
 
+    # блок
     def _block(self, title: str, kind: str = "default") -> QFrame:
-        """Цветной блок с заголовком (пастельные цвета)."""
-
         frame = QFrame()
         frame.setFrameShape(QFrame.StyledPanel)
 
-        # мягкие оттенки
+        # выбираем акцент под тип блока
         if kind == "primary":
-            accent = "#8BA4E0"  # мягкий голубой
+            accent = ACCENT_PRIMARY
         elif kind == "success":
-            accent = "#7AC29A"  # мягкий мятный
+            accent = ACCENT_SUCCESS
         elif kind == "warning":
-            accent = "#E6B980"  # персиково-бежевый
+            accent = ACCENT_WARNING
         else:
-            accent = "#4C566A"  # спокойный серо-синий
+            accent = "#4C566A"
 
-        frame.setStyleSheet(f"""
-               QFrame {{
-                   background-color: #191b22;        /* фон блока */
-                   border: 1px solid #262933;
-                   border-radius: 10px;
-                   border-left: 4px solid {accent};  /* цветная лента слева */
-               }}
-           """)
+        frame.setStyleSheet(
+            f"""
+            background-color: {CARD_BG};
+            border-radius: 12px;
+            border: 1px solid {CARD_BORDER};
+            border-right: 0.5px solid {accent};
+        """
+        )
 
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -155,7 +199,7 @@ class UIMainWindow(object):
 
         lbl = QLabel(title)
         lbl.setFont(QFont("Segoe UI", 14, QFont.Bold))
-        lbl.setStyleSheet(f"color: {accent};")  # заголовок в том же мягком цвете
+        lbl.setStyleSheet(f"color: {accent};")
         layout.addWidget(lbl)
 
         return frame
@@ -163,61 +207,70 @@ class UIMainWindow(object):
     def _button(self, text: str) -> QPushButton:
         btn = QPushButton(text)
         btn.setMinimumHeight(42)
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn.setStyleSheet("""
-               QPushButton {
-                   background-color: #3F4F79;   /* приглушённый синий */
-                   color: #F5F5F7;
-                   border: 1px solid #323A52;
-                   border-radius: 8px;
-                   padding: 6px 14px;
-                   font-size: 15px;
-                   font-weight: 500;
-               }
-               QPushButton:hover {
-                   background-color: #364568;   /* чуть темнее при hover */
-                   border-color: #2B3550;
-               }
-               QPushButton:pressed {
-                   background-color: #2B3452;
-                   border-color: #222A40;
-               }
-               QPushButton:disabled {
-                   background-color: #252937;
-                   color: #9CA3AF;
-                   border-color: #3A4257;
-               }
-           """)
-        return btn
-
-
-    def _button_danger(self, text: str) -> QPushButton:
-        """Кнопка для опасных действий (сброс базы и т.п.) в мягком красном."""
-        btn = QPushButton(text)
-        btn.setMinimumHeight(42)
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn.setStyleSheet("""
-            QPushButton {
-                background-color: #B96B6B;   /* мягкий кирпичный */
-                color: #FFF5F5;
-                border: 1px solid #9A5555;
+        btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border: 1px solid {BTN_BORDER};
                 border-radius: 8px;
                 padding: 6px 14px;
                 font-size: 15px;
                 font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #A95B5B;
-                border-color: #874545;
-            }
-            QPushButton:pressed {
-                background-color: #8A4545;
-                border-color: #6B3434;
-            }
-            QPushButton:disabled {
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+                border-color: {BTN_BORDER};
+            }}
+            QPushButton:disabled {{
+                background-color: #252937;
+                color: #9CA3AF;
+                border-color: #3A4257;
+            }}
+        """
+        )
+        return btn
+
+    def _button_danger(self, text: str) -> QPushButton:
+        # опаснаяя кнопка сброса
+        btn = QPushButton(text)
+        btn.setMinimumHeight(42)
+        btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {DANGER_BG};
+                color: {DANGER_TEXT};
+                border: 1px solid {DANGER_BORDER};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 15px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {DANGER_BG_HOVER};
+                border-color: {DANGER_BORDER};
+            }}
+            QPushButton:pressed {{
+                background-color: {DANGER_BG_PRESSED};
+                border-color: {DANGER_BORDER};
+            }}
+            QPushButton:disabled {{
                 background-color: #4B3A3A;
                 color: #E5E7EB;
                 border-color: #6B4A4A;
-            }
-        """)
+            }}
+        """
+        )
         return btn

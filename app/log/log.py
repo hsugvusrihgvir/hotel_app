@@ -1,6 +1,3 @@
-# log.py — единый логгер приложения
-# короткие комментарии
-
 import logging
 import os
 from datetime import datetime
@@ -19,7 +16,7 @@ log_file = os.path.join(
 app_logger = logging.getLogger("app")
 app_logger.setLevel(logging.INFO)
 
-# формат логов
+# шаблон логов
 fmt = logging.Formatter(
     "[%(asctime)s] [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"

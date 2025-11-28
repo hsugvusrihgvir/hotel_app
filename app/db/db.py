@@ -1,5 +1,3 @@
-# db.py — ядро работы с PostgreSQL
-# короткие комментарии, чистая архитектура
 import psycopg2
 import psycopg2.extras
 from psycopg2 import sql
@@ -11,8 +9,6 @@ import os
 
 
 class Database:
-    """слой PostgreSQL + автоматическая загрузка .env"""
-
     def __init__(self):
         load_dotenv(find_dotenv())
 
@@ -22,10 +18,11 @@ class Database:
             "user": os.getenv("DB_USER"),
             "password": os.getenv("DB_PASSWORD"),
             "dbname": os.getenv("DB_NAME"),
-        }
+        } # данные
 
         self.conn = None
 
+    # подключение
     def connect(self):
         try:
             self.conn = psycopg2.connect(**self.conn_params)
@@ -35,13 +32,14 @@ class Database:
             app_logger.error(f"connection error: {e}")
             raise
 
+    # закрыть подключение
     def close(self):
         if self.conn:
             self.conn.close()
             app_logger.info("DB closed")
 
+    # список таблиц
     def get_tables(self):
-        """возвращает список таблиц из public-схемы"""
         q = """
             SELECT table_name
             FROM information_schema.tables
@@ -52,11 +50,8 @@ class Database:
             cur.execute(q)
             return [r["table_name"] for r in cur.fetchall()]
 
+    # список полей таблицы
     def get_table_columns(self, table_name: str):
-        """
-        Возвращает информацию о колонках таблицы:
-        имя, тип, nullable, default, enum_values (если есть)
-        """
         q = """
             SELECT 
                 column_name,
@@ -74,7 +69,7 @@ class Database:
             cur.execute(q, (table_name,))
             columns = cur.fetchall()
 
-        # добавим enum значения, если нужно
+        # добавим enum значения если нужно
         for col in columns:
             if self._is_enum(col["udt_name"]):
                 col["enum_values"] = self._get_enum_values(col["udt_name"])
@@ -83,6 +78,7 @@ class Database:
 
         return columns
 
+    # проверка
     def _is_enum(self, type_name):
         q = """
             SELECT 1
@@ -93,6 +89,7 @@ class Database:
             cur.execute(q, (type_name,))
             return cur.fetchone() is not None
 
+    # значения enum
     def _get_enum_values(self, type_name):
         q = """
             SELECT enumlabel
@@ -105,11 +102,8 @@ class Database:
             cur.execute(q, (type_name,))
             return [r["enumlabel"] for r in cur.fetchall()]
 
+    # вставка данных в таблицу
     def insert_row(self, table: str, data: dict):
-        """
-        Вставка строки в таблицу с безопасной параметризацией
-        data = {"column1": value1, "column2": value2, ...}
-        """
         from psycopg2 import sql
 
         columns = list(data.keys())
@@ -141,16 +135,13 @@ class Database:
         finally:
             cur.close()
 
+
     def commit(self):
-        """ручной коммит (дополнительно к автокоммиту в cursor())."""
         if getattr(self, "conn", None) is not None:
             self.conn.commit()
-    # ---------------------------
-    # DDL (CREATE / ALTER / DROP)
-    # ---------------------------
 
+    # создание схем таблиц типов
     def execute_ddl(self, query: str):
-        """выполнить DDL команду — создание схем/таблиц/типов"""
         with self.cursor() as cur:
             cur.execute(query)
         app_logger.info(f"DDL executed: {query[:80].replace(chr(10),' ')}")

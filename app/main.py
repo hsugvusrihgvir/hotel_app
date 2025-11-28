@@ -2,13 +2,12 @@ import sys
 from PySide6.QtWidgets import QApplication, QMessageBox
 from app.main_window import MainWindow
 from app.db.db import Database
-from app.log.log import app_logger
+
 
 
 def main():
     app = QApplication(sys.argv)
-
-    db = Database()  # загрузит .env
+    db = Database()
 
     try:
         db.connect()

@@ -1,7 +1,4 @@
-# app/main_window.py — связывает UI и логику
-
 from PySide6.QtWidgets import QMainWindow, QMessageBox
-
 from app.ui.ui_main_window import UIMainWindow
 from app.ui.enter_data_dialog import EnterDataDialog
 from app.ui.join_master_dialog import JoinMasterDialog
@@ -23,32 +20,29 @@ class MainWindow(QMainWindow):
         self.ui = UIMainWindow()
         self.ui.setup_ui(self)
 
-        self._types_window = None  # ← добавь эту строку
+        self._types_window = None
 
         self._connect_signals()
 
-    # ---------------------------------------------------
-    # связывание кнопок и логики
-    # ---------------------------------------------------
 
     def _connect_signals(self):
-        self.ui.btn_create_schema.clicked.connect(self.on_create_schema)
-        self.ui.btn_add_data.clicked.connect(self.on_add_data)
-        self.ui.btn_show_data.clicked.connect(self.on_show_data)
-        self.ui.btn_alter.clicked.connect(self.on_alter)
-        self.ui.btn_reset_schema.clicked.connect(self.on_reset_schema)
-        self.ui.btn_quick_view.clicked.connect(self.on_quick_view)
-        # отдельный модуль пользовательских типов
-        self.ui.btn_types.clicked.connect(self.on_manage_types)
-        self.ui.btn_views.clicked.connect(self.on_views)# менеджер представлений
-        self.ui.btn_cte_builder.clicked.connect(self.on_cte_builder)
+        self.ui.btn_create_schema.clicked.connect(self.on_create_schema) # создать схему
+        self.ui.btn_add_data.clicked.connect(self.on_add_data) # добавить данные
+        self.ui.btn_show_data.clicked.connect(self.on_show_data) # показать данные
+        self.ui.btn_alter.clicked.connect(self.on_alter) # изменить структуру
+        self.ui.btn_reset_schema.clicked.connect(self.on_reset_schema) # пересоздать схему
+        self.ui.btn_quick_view.clicked.connect(self.on_quick_view) # мини данные
+        self.ui.btn_types.clicked.connect(self.on_manage_types) # енам
+        self.ui.btn_views.clicked.connect(self.on_views) # представления окно
+        self.ui.btn_cte_builder.clicked.connect(self.on_cte_builder) # билдер cte
 
-        # ---------------------------------------------------
+    # внутр. функции
+    def _error(self, text: str): # вывод ошибок, запись в лог
+        QMessageBox.critical(self, "Ошибка", text)
+        app_logger.error(text)
+
     # обработчики
-    # ---------------------------------------------------
-
     def on_create_schema(self):
-        """запуск SQL-скрипта schema.sql"""
         try:
             with open("db/schema.sql", "r", encoding="utf-8") as f:
                 script = f.read()
@@ -60,14 +54,13 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self._error(f"Ошибка создания схемы:\n{e}")
 
-        if self._types_window is not None:
+        if self._types_window is not None: # обновляем вручную
             try:
                 self._types_window.reload_types()
             except Exception as e:
                 app_logger.error(f"Не удалось обновить окно типов после создания схемы: {e}")
 
     def on_add_data(self):
-        """модальное окно для вставки данных"""
         try:
             dlg = EnterDataDialog(self.db, self)
             dlg.exec()
@@ -75,9 +68,8 @@ class MainWindow(QMainWindow):
             self._error(f"Ошибка при добавлении данных:\n{e}")
 
     def on_show_data(self):
-        """мастер JOIN → окно просмотра данных"""
         try:
-            # сначала мастер выбора таблиц / полей / типа JOIN
+            # диалоговое окно
             join_dlg = JoinMasterDialog(self.db, self)
             if join_dlg.exec() != QDialog.Accepted:
                 return
@@ -98,7 +90,6 @@ class MainWindow(QMainWindow):
             self._error(f"Ошибка загрузки данных:\n{e}")
 
     def on_alter(self):
-        """окно изменения структуры таблиц (ALTER TABLE + типы)"""
         try:
             dlg = AlterTableWindow(self.db, self)
             dlg.exec()
@@ -106,7 +97,6 @@ class MainWindow(QMainWindow):
             self._error(f"Ошибка ALTER TABLE:\n{e}")
 
     def on_views(self):
-        """Открыть менеджер представлений и CTE."""
         try:
             wnd = ViewsWindow(self.db, self)
             wnd.show()
@@ -114,24 +104,13 @@ class MainWindow(QMainWindow):
             self._error(f"Ошибка при открытии модуля представлений:\n{e}")
 
     def on_cte_builder(self):
-        """Открыть конструктор CTE напрямую из главного меню."""
         try:
             wnd = CteBuilderWindow(self.db, self)
             wnd.show()
         except Exception as e:
             self._error(f"Ошибка при открытии конструктора CTE:\n{e}")
 
-    # ---------------------------------------------------
-    # внутренние функции
-    # ---------------------------------------------------
-
-    def _error(self, text: str):
-        """одинаковый вывод ошибок + лог"""
-        QMessageBox.critical(self, "Ошибка", text)
-        app_logger.error(text)
-
     def on_reset_schema(self):
-        """подтверждение и полный сброс базы через schema.sql"""
         reply = QMessageBox.question(
             self,
             "Подтверждение сброса",
@@ -160,7 +139,6 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 app_logger.error(f"Не удалось обновить окно типов после сброса: {e}")
 
-
     def on_quick_view(self):
         try:
             wnd = QuickViewWindow(self.db, self)
@@ -169,7 +147,6 @@ class MainWindow(QMainWindow):
             self._error(f"Ошибка быстрого просмотра:\n{e}")
 
     def on_manage_types(self):
-        """Открыть отдельное окно управления пользовательскими типами."""
         try:
             if self._types_window is None:
                 self._types_window = TypesWindow(self.db, self)
@@ -179,10 +156,3 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self._error(f"Ошибка при открытии окна типов:\n{e}")
 
-    def on_cte_builder(self):
-        """Открыть конструктор CTE (WITH-запросов)."""
-        try:
-            wnd = CteBuilderWindow(self.db, self)
-            wnd.show()
-        except Exception as e:
-            self._error(f"Ошибка открытия конструктора CTE:\n{e}")
