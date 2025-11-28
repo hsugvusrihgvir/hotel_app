@@ -102,23 +102,6 @@ class Database:
             cur.execute(q, (type_name,))
             return [r["enumlabel"] for r in cur.fetchall()]
 
-    # вставка данных в таблицу
-    def insert_row(self, table: str, data: dict):
-        from psycopg2 import sql
-
-        columns = list(data.keys())
-        values = [data[c] for c in columns]
-
-        query = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({placeholders})").format(
-            table=sql.Identifier(table),
-            fields=sql.SQL(", ").join(map(sql.Identifier, columns)),
-            placeholders=sql.SQL(", ").join(sql.Placeholder() * len(columns)),
-        )
-
-        with self.cursor() as cur:
-            cur.execute(query, values)
-
-        app_logger.info(f"INSERT INTO {table}: {data}")
 
     @contextmanager
     def cursor(self):
@@ -135,7 +118,7 @@ class Database:
         finally:
             cur.close()
 
-
+    # учное управление
     def commit(self):
         if getattr(self, "conn", None) is not None:
             self.conn.commit()
@@ -147,37 +130,36 @@ class Database:
         app_logger.info(f"DDL executed: {query[:80].replace(chr(10),' ')}")
 
     def alter_table(self, query: str):
-        """выполнить ALTER TABLE (в UI формируется динамически)"""
         with self.cursor() as cur:
             cur.execute(query)
         app_logger.info(f"ALTER executed: {query[:80].replace(chr(10),' ')}")
 
-    # ---------------------------
-    # INSERT
-    # ---------------------------
-
     def insert(self, table: str, data: dict):
-        """
-        параметризованный insert
-        data = {"col": value, ...}
-        """
-        cols = list(data.keys())
-        values = [data[c] for c in cols]
+        if not data:
+            raise ValueError("insert() got empty data dict")
 
-        q = sql.SQL("INSERT INTO {tbl} ({cols}) VALUES ({vals})") \
-            .format(
-                tbl=sql.Identifier(table),
-                cols=sql.SQL(', ').join(map(sql.Identifier, cols)),
-                vals=sql.SQL(', ').join(sql.Placeholder() * len(cols)),
-            )
+        columns = list(data.keys())
+        values = [data[c] for c in columns]
+
+        query = sql.SQL(
+            "INSERT INTO {table} ({fields}) VALUES ({placeholders})"
+        ).format(
+            table=sql.Identifier(table),
+            fields=sql.SQL(", ").join(map(sql.Identifier, columns)),
+            placeholders=sql.SQL(", ").join(sql.Placeholder() * len(columns)),
+        )
 
         with self.cursor() as cur:
-            cur.execute(q, values)
+            cur.execute(query, values)
 
-        app_logger.info(f"INSERT into {table}: {data}")
+        app_logger.info(f"INSERT INTO {table}: {data}")
 
+    # чтобы не переписывать
+    def insert_row(self, table: str, data: dict):
+        return self.insert(table, data)
+
+    # все польз. типы
     def get_custom_types(self):
-        """возвращает список всех пользовательских типов public"""
         q = """
             SELECT typname
             FROM pg_type
@@ -189,11 +171,7 @@ class Database:
             cur.execute(q)
             return [r['typname'] for r in cur.fetchall()]
 
-    # ---------------------------
-    # универсальный SELECT
-    # используется и для фильтров, и для join, и для группировки
-    # ---------------------------
-
+    # универсальный селект
     def select(self,
                table: str,
                columns="*",
@@ -202,14 +180,6 @@ class Database:
                group=None,
                having=None,
                limit=None):
-        """
-        универсальный SELECT для UI-конструктора
-        table — строка или sql.SQL (для subquery)
-        columns — строка или список
-        where — список sql.SQL условий
-        order — [('col', 'ASC'), ...]
-        group — список колонок
-        """
 
         # колонки
         if isinstance(columns, list):
@@ -252,19 +222,7 @@ class Database:
             rows = cur.fetchall()
             return rows
 
-    # ---------------------------
-    # поиск LIKE / regex / SIMILAR TO
-    # ---------------------------
-
     def text_search(self, table, column, pattern, mode="like"):
-        """
-        mode:
-            like — '%abc%'
-            regex — ~  ~*
-            neg_regex — !~  !~*
-            similar — SIMILAR TO
-            not_similar — NOT SIMILAR TO
-        """
         col = sql.Identifier(column)
 
         if mode == "like":
@@ -301,15 +259,9 @@ class Database:
             cur.execute(q, (value,))
             return cur.fetchall()
 
-    # ---------------------------
-    # JOIN-конструктор (INNER/LEFT/RIGHT/FULL)
-    # ---------------------------
 
     def join(self, t1, t2, key1, key2, join_type="INNER"):
-        """
-        простой универсальный join
-        join_type: INNER | LEFT | RIGHT | FULL
-        """
+
         q = sql.SQL(
             "SELECT * FROM {t1} {jt} JOIN {t2} "
             "ON {t1}.{k1} = {t2}.{k2}"
@@ -325,10 +277,6 @@ class Database:
             cur.execute(q)
             return cur.fetchall()
 
-    # ---------------------------
-    # CTE (WITH)
-    # ---------------------------
-
     def cte(self, name, cte_query: str, main_query: str):
         """выполнить CTE (для будущего UI-конструктора)"""
         q = sql.SQL(f"WITH {name} AS ({cte_query}) {main_query}")
@@ -336,10 +284,6 @@ class Database:
         with self.cursor() as cur:
             cur.execute(q)
             return cur.fetchall()
-
-    # ---------------------------
-    # VIEW / MATERIALIZED VIEW
-    # ---------------------------
 
     def create_view(self, name, query):
         q = sql.SQL(f"CREATE OR REPLACE VIEW {name} AS {query}")
@@ -400,11 +344,6 @@ class Database:
         return [(row["id"], row["label"]) for row in rows]
 
     def get_user_types(self):
-        """
-        Список пользовательских типов (ENUM и настоящих COMPOSITE, а не таблиц).
-        Возвращает список dict: {"name", "kind", "schema}.
-        kind: 'e' — ENUM, 'c' — составной тип.
-        """
         q = """
                SELECT
                    t.typname,
@@ -431,15 +370,10 @@ class Database:
         ]
 
     def get_enum_labels(self, type_name: str):
-        """Все значения ENUM-типа (список строк)."""
-        # используем уже существующую внутреннюю функцию
+
         return self._get_enum_values(type_name)
 
     def get_composite_fields(self, type_name: str):
-        """
-        Поля составного типа.
-        Возвращает список dict: {"name": имя_поля, "type": текстовое_описание_типа}.
-        """
         q = """
             SELECT
                 att.attname AS name,
@@ -474,7 +408,6 @@ class Database:
         app_logger.info(f"Создан ENUM-тип {name} со значениями {labels}")
 
     def add_enum_value(self, type_name: str, value: str):
-        """ALTER TYPE <type_name> ADD VALUE <value>."""
         value = value.strip()
         if not value:
             return
@@ -488,12 +421,6 @@ class Database:
         app_logger.info(f"В ENUM-тип {type_name} добавлено значение {value!r}")
 
     def drop_enum_value(self, type_name: str, value: str):
-        """
-        Удалить значение из ENUM-типа.
-
-        ВАЖНО: ALTER TYPE ... DROP VALUE есть только в PostgreSQL 16+.
-        На более старых версиях сервер это просто не умеет.
-        """
         value = (value or "").strip()
         if not value:
             return
@@ -520,12 +447,6 @@ class Database:
         app_logger.info(f"Из ENUM-типа {type_name} удалено значение {value!r}")
 
     def create_composite_type(self, name: str, fields: list[tuple[str, str]]):
-        """
-        CREATE TYPE <name> AS (field1 type1, field2 type2, ...).
-
-        fields — список кортежей (имя_поля, тип_данных).
-        Тип данных передаётся текстом, например: "integer", "text", "comfort_enum".
-        """
         cleaned_fields = []
         for fname, ftype in fields:
             fname = (fname or "").strip()
@@ -560,12 +481,6 @@ class Database:
         )
 
     def drop_type(self, type_name: str, cascade: bool = False):
-        """
-        DROP TYPE <type_name> [CASCADE | RESTRICT].
-
-        В учебном приложении обычно безопаснее использовать CASCADE,
-        чтобы не ловить ошибки из-за зависимых объектов.
-        """
         query = sql.SQL("DROP TYPE {} {}").format(
             sql.Identifier(type_name),
             sql.SQL("CASCADE") if cascade else sql.SQL("RESTRICT"),

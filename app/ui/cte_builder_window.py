@@ -503,8 +503,20 @@ class CteBuilderWindow(QMainWindow):
 
     def _reload_result(self):
         """Выполнить CTE и показать результат в правой таблице."""
-        sql = self._build_cte_sql()
+        # Чтобы понять, дергается ли вообще слот
+        app_logger.info("CTEBuilder: нажали 'Выполнить CTE'")
+
+        # 1. Собираем SQL, ловим ошибки из билдера
+        try:
+            sql = self._build_cte_sql()
+        except Exception as e:
+            app_logger.error(f"CTEBuilder: ошибка при сборке SQL: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при сборке SQL:\n{e}")
+            return
+
         app_logger.info(f"CTEBuilder SQL: {sql}")
+
+        # 2. Выполняем SQL
         try:
             with self.db.cursor() as cur:
                 cur.execute(sql)
@@ -514,10 +526,17 @@ class CteBuilderWindow(QMainWindow):
             QMessageBox.critical(self, "Ошибка", f"Ошибка выполнения запроса:\n{e}")
             return
 
+        # 3. Обработка результата
         if not rows:
             self.table.clear()
             self.table.setRowCount(0)
             self.table.setColumnCount(0)
+            app_logger.info("CTEBuilder: запрос выполнен, но вернул 0 строк")
+            QMessageBox.information(
+                self,
+                "Результат CTE",
+                "Запрос успешно выполнен, но не вернул ни одной строки.",
+            )
             return
 
         cols = list(rows[0].keys())
@@ -530,10 +549,6 @@ class CteBuilderWindow(QMainWindow):
                 val = row[col]
                 text = "" if val is None else str(val)
                 self.table.setItem(r_idx, c_idx, QTableWidgetItem(text))
-
-        # ---------------------------------------------------------
-        # Валидация имени объекта (CTE / VIEW / MAT VIEW)
-        # ---------------------------------------------------------
 
     def _validate_object_name(self, name: str, title: str) -> bool:
         name = name.strip()
@@ -606,13 +621,22 @@ class CteBuilderWindow(QMainWindow):
 
         try:
             with self.db.cursor() as cur:
-                cur.execute(f"CREATE MATERIALIZED VIEW IF NOT EXISTS {name} AS {sql_select}")
+                # без IF NOT EXISTS — пусть Postgres честно ругается,
+                # если объект с таким именем уже есть
+                cur.execute(f"CREATE MATERIALIZED VIEW {name} AS {sql_select}")
+
             QMessageBox.information(
                 self,
                 "MATERIALIZED VIEW",
-                f"Материализованное представление {name} создано или уже существует."
+                f"Материализованное представление {name} успешно создано."
             )
             app_logger.info(f"Создано MATERIALIZED VIEW {name} через CTE-конструктор")
+
         except Exception as e:
+            # если имя занято (VIEW/таблица/другое mat view) — увидишь нормальную ошибку
             app_logger.error(f"Ошибка создания MATERIALIZED VIEW {name}: {e}")
-            QMessageBox.critical(self, "Ошибка", f"Не удалось создать MATERIALIZED VIEW:\n{e}")
+            QMessageBox.critical(
+                self,
+                "Ошибка",
+                f"Не удалось создать MATERIALIZED VIEW {name}:\n{e}"
+            )

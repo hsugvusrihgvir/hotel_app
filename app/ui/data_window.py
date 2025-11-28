@@ -188,6 +188,16 @@ class WhereBuilderWidget(QWidget):
             esc = f"%{esc}%"
         return f"'{esc}'"
 
+    def build_where_sql(self) -> str:
+        """
+        Собирает все условия в одну строку через AND.
+        Нужно и для DataWindow (если захочешь), и для CTE-конструктора.
+        """
+        conditions = self.get_conditions()
+        if not conditions:
+            return ""
+        return " AND ".join(conditions)
+
 
 class HavingBuilderWidget(QWidget):
     """
@@ -258,6 +268,16 @@ class HavingBuilderWidget(QWidget):
         for i in range(self.conditions_list.count()):
             res.append(self.conditions_list.item(i).text())
         return res
+
+    def build_having_sql(self) -> str:
+        """
+        То же самое, что get_conditions, но сразу одной строкой для HAVING.
+        Нужен CTE-конструктору.
+        """
+        conditions = self.get_conditions()
+        if not conditions:
+            return ""
+        return " AND ".join(conditions)
 
     # ------------ внутренняя логика -------------
 
