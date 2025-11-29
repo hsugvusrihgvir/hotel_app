@@ -16,6 +16,8 @@ from app.ui.cte_builder_window import CteBuilderWindow
 
 from app.ui.cte_storage import GLOBAL_SAVED_CTES
 
+from app.ui.theme import *
+
 
 class ViewsWindow(QMainWindow):
     """
@@ -42,13 +44,12 @@ class ViewsWindow(QMainWindow):
         self._build_ui()
         self._load_views_list()
 
-    # ------------------------------------------------------------------
-    # UI
-    # ------------------------------------------------------------------
 
     def _build_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
+
+
 
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(12, 12, 12, 12)
