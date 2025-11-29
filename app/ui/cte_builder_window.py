@@ -14,23 +14,9 @@ from app.ui.data_window import WhereBuilderWidget, HavingBuilderWidget
 import re
 
 class CteBuilderWindow(QMainWindow):
-    """
-    Окно-конструктор CTE (WITH-запросов).
-
-    Работает с одной исходной таблицей/представлением и строит подзапрос вида:
-
-        WITH cte_name AS (
-            <собранный SELECT>
-        )
-        SELECT * FROM cte_name;
-    """
+    # Окно-конструктор CTE (WITH-запросов).
 
     def __init__(self, db, parent=None, on_save_cte=None):
-        """
-        db — объект Database.
-        on_save_cte(name: str, inner_sql: str) — колбэк из ViewsWindow
-        для сохранения именованных CTE в менеджере представлений.
-        """
         super().__init__(parent)
         self.db = db
         self.on_save_cte = on_save_cte
@@ -55,7 +41,6 @@ class CteBuilderWindow(QMainWindow):
 
     # ------------------------------------------------------------------
     # UI
-    # ------------------------------------------------------------------
 
     def _build_ui(self):
         central = QWidget()
@@ -74,7 +59,7 @@ class CteBuilderWindow(QMainWindow):
         self.cte_name_edit = QLineEdit()
         self.cte_name_edit.setPlaceholderText("Имя CTE, например cte_report")
 
-        # валидатор имени: только латиница, цифры и "_", не с цифры
+        # валидатор имени
         name_re = QRegularExpression(r"^[A-Za-z_][A-Za-z0-9_]*$")
         name_validator = QRegularExpressionValidator(name_re, self)
         self.cte_name_edit.setValidator(name_validator)
@@ -94,13 +79,13 @@ class CteBuilderWindow(QMainWindow):
 
         main_layout.addWidget(header)
 
-        # центральная область: слева конструкторы, справа таблица результата
+        # центральная область
         body = QWidget()
         body_layout = QHBoxLayout(body)
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(10)
 
-        # ---- левый блок с вкладками ----
+        # левый блок с вкладками
         left = QWidget()
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(0, 0, 0, 0)
@@ -109,7 +94,7 @@ class CteBuilderWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
 
-        # ===== вкладка "Фильтры" =====
+        # вкладка Фильтры
         filters_tab = QWidget()
         filters_layout = QVBoxLayout(filters_tab)
         filters_layout.setContentsMargins(4, 4, 4, 4)
@@ -165,7 +150,7 @@ class CteBuilderWindow(QMainWindow):
         filters_layout.addStretch()
         self.tabs.addTab(filters_tab, "Фильтры")
 
-        # ===== вкладка "Агрегация" =====
+        # вкладка Агрегация
         agg_tab = QWidget()
         agg_layout = QVBoxLayout(agg_tab)
         agg_layout.setContentsMargins(4, 4, 4, 4)
@@ -217,12 +202,13 @@ class CteBuilderWindow(QMainWindow):
         agg_layout.addStretch()
         self.tabs.addTab(agg_tab, "Агрегация")
 
-        # ===== вкладка "CASE / NULL" =====
+        # вкладка CASE / NULL
         case_tab = QWidget()
         case_layout = QVBoxLayout(case_tab)
         case_layout.setContentsMargins(4, 4, 4, 4)
         case_layout.setSpacing(6)
-        case_layout.addWidget(QLabel("Конструктор CASE / COALESCE / NULLIF добавим позже."))
+
+        self._build_case_null_section(case_layout)
         case_layout.addStretch()
         self.tabs.addTab(case_tab, "CASE / NULL")
 
@@ -268,9 +254,155 @@ class CteBuilderWindow(QMainWindow):
 
         main_layout.addWidget(body)
 
+    def _build_case_null_section(self, parent_layout: QVBoxLayout):
+        """Секция 'CASE / Работа с NULL' во вкладке CASE / NULL."""
+
+        from PySide6.QtWidgets import QGridLayout  # локальный импорт
+
+        wrapper = QWidget()
+        grid = QGridLayout(wrapper)
+        grid.setContentsMargins(4, 4, 4, 4)
+        grid.setHorizontalSpacing(6)
+        grid.setVerticalSpacing(4)
+
+        row = 0
+
+        # ---------- CASE ----------
+        title_case = QLabel("CASE — вычисляемый столбец")
+        title_case.setStyleSheet("color:#9CA3AF; font-size:11px;")
+        grid.addWidget(title_case, row, 0, 1, 4)
+        row += 1
+
+        grid.addWidget(QLabel("Колонка:"), row, 0)
+        self.case_col = QComboBox()
+        grid.addWidget(self.case_col, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Оператор:"), row, 0)
+        self.case_op = QComboBox()
+        self.case_op.addItems(["=", "<>", ">", "<", ">=", "<=", "BETWEEN"])
+        grid.addWidget(self.case_op, row, 1)
+
+        grid.addWidget(QLabel("Значение 1:"), row, 2)
+        self.case_value1 = QLineEdit()
+        grid.addWidget(self.case_value1, row, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Значение 2 (для BETWEEN):"), row, 0, 1, 2)
+        self.case_value2 = QLineEdit()
+        grid.addWidget(self.case_value2, row, 2, 1, 2)
+        row += 1
+
+        grid.addWidget(QLabel("THEN:"), row, 0)
+        self.case_then = QLineEdit()
+        grid.addWidget(self.case_then, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("ELSE (опционально):"), row, 0)
+        self.case_else = QLineEdit()
+        grid.addWidget(self.case_else, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Alias:"), row, 0)
+        self.case_alias = QLineEdit()
+        self.case_alias.setPlaceholderText("например: price_case")
+        grid.addWidget(self.case_alias, row, 1, 1, 2)
+        self.btn_apply_case = QPushButton("Применить CASE")
+        self.btn_apply_case.clicked.connect(self._reload_result)
+        grid.addWidget(self.btn_apply_case, row, 3)
+        row += 1
+
+        # ---------- COALESCE ----------
+        sep1 = QFrame()
+        sep1.setFrameShape(QFrame.HLine)
+        sep1.setFrameShadow(QFrame.Sunken)
+        grid.addWidget(sep1, row, 0, 1, 4)
+        row += 1
+
+        title_coa = QLabel("COALESCE — заменить NULL значением")
+        title_coa.setStyleSheet("color:#9CA3AF; font-size:11px;")
+        grid.addWidget(title_coa, row, 0, 1, 4)
+        row += 1
+
+        grid.addWidget(QLabel("Колонка:"), row, 0)
+        self.coalesce_col = QComboBox()
+        grid.addWidget(self.coalesce_col, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Если NULL, то:"), row, 0)
+        self.coalesce_value = QLineEdit()
+        self.coalesce_value.setPlaceholderText("подставляемое значение")
+        grid.addWidget(self.coalesce_value, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Alias:"), row, 0)
+        self.coalesce_alias = QLineEdit()
+        self.coalesce_alias.setPlaceholderText("например: comment_filled")
+        grid.addWidget(self.coalesce_alias, row, 1, 1, 2)
+        self.btn_apply_coalesce = QPushButton("Применить COALESCE")
+        self.btn_apply_coalesce.clicked.connect(self._reload_result)
+        grid.addWidget(self.btn_apply_coalesce, row, 3)
+        row += 1
+
+        # ---------- NULLIF ----------
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.HLine)
+        sep2.setFrameShadow(QFrame.Sunken)
+        grid.addWidget(sep2, row, 0, 1, 4)
+        row += 1
+
+        title_nullif = QLabel("NULLIF — NULL, если значения равны")
+        title_nullif.setStyleSheet("color:#9CA3AF; font-size:11px;")
+        grid.addWidget(title_nullif, row, 0, 1, 4)
+        row += 1
+
+        grid.addWidget(QLabel("Колонка:"), row, 0)
+        self.nullif_col = QComboBox()
+        grid.addWidget(self.nullif_col, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Сравнить с:"), row, 0)
+        self.nullif_value = QLineEdit()
+        self.nullif_value.setPlaceholderText("значение, при котором вернуть NULL")
+        grid.addWidget(self.nullif_value, row, 1, 1, 3)
+        row += 1
+
+        grid.addWidget(QLabel("Alias:"), row, 0)
+        self.nullif_alias = QLineEdit()
+        self.nullif_alias.setPlaceholderText("например: paid_or_null")
+        grid.addWidget(self.nullif_alias, row, 1, 1, 2)
+        self.btn_apply_nullif = QPushButton("Применить NULLIF")
+        self.btn_apply_nullif.clicked.connect(self._reload_result)
+        grid.addWidget(self.btn_apply_nullif, row, 3)
+        row += 1
+
+        parent_layout.addWidget(wrapper)
+
+    def _apply_columns_to_case_null(self):
+        """Проставляем список колонок в комбобоксы CASE / COALESCE / NULLIF."""
+        all_cols = list(self.all_columns)
+
+        targets = (
+            getattr(self, "case_col", None),
+            getattr(self, "coalesce_col", None),
+            getattr(self, "nullif_col", None),
+        )
+
+        if not all_cols:
+            for cb in targets:
+                if cb is not None:
+                    cb.clear()
+            return
+
+        for cb in targets:
+            if cb is not None:
+                cb.blockSignals(True)
+                cb.clear()
+                cb.addItems(all_cols)
+                cb.blockSignals(False)
+
     # ------------------------------------------------------------------
     # Загрузка источников и колонок
-    # ------------------------------------------------------------------
 
     def _load_sources(self):
         """Заполняем список источников (таблицы или представления) в combobox."""
@@ -324,6 +456,7 @@ class CteBuilderWindow(QMainWindow):
             self.all_columns = []
             self.col_types.clear()
             self._apply_columns_to_builders()
+            self._apply_columns_to_case_null()
             return
 
         self.current_source_name = name
@@ -358,7 +491,7 @@ class CteBuilderWindow(QMainWindow):
             item.setCheckState(Qt.Checked)
             self.columns_list.addItem(item)
 
-        # combobox'ы
+        # combobox
         self.search_column.clear()
         self.group_col.clear()
         self.aggregate_target.clear()
@@ -370,6 +503,7 @@ class CteBuilderWindow(QMainWindow):
         self.order_col.addItems(self.all_columns)
 
         self._apply_columns_to_builders()
+        self._apply_columns_to_case_null()
 
     def _apply_columns_to_builders(self):
         self.where_builder.set_columns(self.all_columns, self.col_types)
@@ -377,12 +511,9 @@ class CteBuilderWindow(QMainWindow):
 
     # ------------------------------------------------------------------
     # Форматирование литералов для поиска
-    # ------------------------------------------------------------------
 
     def _format_search_literal(self, raw_val: str, data_type: str, op: str) -> str:
-        """
-        Упрощённый вариант форматирования значения под операторы LIKE / SIMILAR / regex.
-        """
+        # Упрощённый вариант форматирования значения под операторы LIKE / SIMILAR / regex.
 
         numeric_like = ("smallint", "integer", "bigint", "numeric", "real", "double")
         bool_like = ("boolean",)
@@ -418,9 +549,111 @@ class CteBuilderWindow(QMainWindow):
 
         return f"'{esc}'"
 
+    def _build_case_null_exprs(self) -> list[str]:
+        """
+        Строит вычисляемые столбцы:
+        - CASE ... END AS alias
+        - COALESCE(col, value) AS alias
+        - NULLIF(col, value) AS alias
+        Возвращает список строк вида 'expr AS alias'.
+        """
+        exprs: list[str] = []
+
+        def register_alias(alias: str, core_expr: str):
+            """Добавляем alias в ORDER BY, чтобы по нему можно было сортировать."""
+            if self.order_col.findText(alias) == -1:
+                self.order_col.addItem(alias)
+
+        # ---------- CASE ----------
+        if hasattr(self, "case_col"):
+            col = (self.case_col.currentText() or "").strip()
+            op = (self.case_op.currentText() or "").strip()
+            alias = (self.case_alias.text() or "").strip()
+            v1 = (self.case_value1.text() or "").strip()
+            v2 = (self.case_value2.text() or "").strip()
+            then_raw = (self.case_then.text() or "").strip()
+            else_raw = (self.case_else.text() or "").strip()
+
+            if col and op and v1 and then_raw:
+                if not alias:
+                    base = col.split(".")[-1] or "col"
+                    alias = f"{base}_case"
+
+                try:
+                    dt = self.col_types.get(col, "text").lower()
+
+                    if op == "BETWEEN":
+                        if not v2:
+                            QMessageBox.warning(self, "CASE", "Для BETWEEN укажите два значения.")
+                        else:
+                            lit1 = self.where_builder._format_literal(v1, dt, op)
+                            lit2 = self.where_builder._format_literal(v2, dt, op)
+                            cond = f"{col} BETWEEN {lit1} AND {lit2}"
+                    else:
+                        lit = self.where_builder._format_literal(v1, dt, op)
+                        cond = f"{col} {op} {lit}"
+
+                    then_esc = then_raw.replace("'", "''")
+                    if else_raw:
+                        else_esc = else_raw.replace("'", "''")
+                        core = (
+                            f"CASE WHEN {cond} "
+                            f"THEN '{then_esc}' "
+                            f"ELSE '{else_esc}' END"
+                        )
+                    else:
+                        core = f"CASE WHEN {cond} THEN '{then_esc}' END"
+
+                    exprs.append(f"{core} AS {alias}")
+                    register_alias(alias, core)
+
+                except Exception as e:
+                    QMessageBox.warning(self, "CASE", f"Не удалось построить CASE:\n{e}")
+
+        # ---------- COALESCE ----------
+        if hasattr(self, "coalesce_col"):
+            col = (self.coalesce_col.currentText() or "").strip()
+            alias = (self.coalesce_alias.text() or "").strip()
+            raw = (self.coalesce_value.text() or "").strip()
+
+            if col and raw:
+                if not alias:
+                    base = col.split(".")[-1] or "col"
+                    alias = f"{base}_coalesce"
+
+                try:
+                    dt = self.col_types.get(col, "text").lower()
+                    lit = self.where_builder._format_literal(raw, dt, "=")
+                    core = f"COALESCE({col}, {lit})"
+                    exprs.append(f"{core} AS {alias}")
+                    register_alias(alias, core)
+                except Exception as e:
+                    QMessageBox.warning(self, "COALESCE", f"Не удалось построить COALESCE:\n{e}")
+
+        # ---------- NULLIF ----------
+        if hasattr(self, "nullif_col"):
+            col = (self.nullif_col.currentText() or "").strip()
+            alias = (self.nullif_alias.text() or "").strip()
+            raw = (self.nullif_value.text() or "").strip()
+
+            if col and raw:
+                if not alias:
+                    base = col.split(".")[-1] or "col"
+                    alias = f"{base}_nullif"
+
+                try:
+                    dt = self.col_types.get(col, "text").lower()
+                    lit = self.where_builder._format_literal(raw, dt, "=")
+                    core = f"NULLIF({col}, {lit})"
+                    exprs.append(f"{core} AS {alias}")
+                    register_alias(alias, core)
+                except Exception as e:
+                    QMessageBox.warning(self, "NULLIF", f"Не удалось построить NULLIF:\n{e}")
+
+        return exprs
+
     # ------------------------------------------------------------------
     # Построение SQL
-    # ------------------------------------------------------------------
 
     def _build_inner_select(self) -> str:
         """Собираем внутренний SELECT для CTE (без WITH/SELECT * FROM cte)."""
@@ -438,6 +671,23 @@ class CteBuilderWindow(QMainWindow):
             cols = ", ".join(checked)
         else:
             cols = ", ".join(self.all_columns) if self.all_columns else "*"
+
+        # режим агрегирования включён?
+        aggregate_mode = bool(
+            self.aggregate_func.currentText().strip()
+            and self.aggregate_target.currentText().strip()
+        )
+
+        # вычисляемые столбцы CASE / COALESCE / NULLIF
+        extra_exprs: list[str] = []
+
+        case_null_exprs = self._build_case_null_exprs()
+        if case_null_exprs and not aggregate_mode:
+            extra_exprs.extend(case_null_exprs)
+
+        if extra_exprs:
+            extra_sql = ", ".join(extra_exprs)
+            cols = f"{cols}, {extra_sql}" if cols.strip() else extra_sql
 
         q = f"SELECT {cols} FROM {self.current_source_schema}.{self.current_source_name}"
 
@@ -502,8 +752,7 @@ class CteBuilderWindow(QMainWindow):
         return f"WITH {cte_name} AS ({inner}) SELECT * FROM {cte_name};"
 
     def _reload_result(self):
-        """Выполнить CTE и показать результат в правой таблице."""
-        # Чтобы понять, дергается ли вообще слот
+        #vВыполнить CTE и показать результат в правой таблице
         app_logger.info("CTEBuilder: нажали 'Выполнить CTE'")
 
         # 1. Собираем SQL, ловим ошибки из билдера
@@ -569,35 +818,42 @@ class CteBuilderWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Сохранение CTE / VIEW / MATERIALIZED VIEW
-    # ---------------------------------------------------------
-
     def _save_as_cte(self):
-        """Сохранить текущий подзапрос как именованный CTE в модуле представлений."""
         name = self.cte_name_edit.text().strip()
         if not self._validate_object_name(name, "Имя CTE"):
             return
 
         inner_sql = self._build_inner_select()
 
+
+        # сохраняем CTE прямо в глобальное хранилище
         if not self.on_save_cte:
-            QMessageBox.information(
-                self,
-                "CTE",
-                "CTE собран, но модуль представлений не передал обработчик сохранения.\n"
-                "Вы всё равно можете выполнить запрос и создать VIEW / MATERIALIZED VIEW."
-            )
+            try:
+                from app.ui.cte_storage import GLOBAL_SAVED_CTES
+                GLOBAL_SAVED_CTES[name] = inner_sql
+                app_logger.info(f"CTE сохранён напрямую через CteBuilderWindow: {name}")
+                QMessageBox.information(
+                    self,
+                    "CTE",
+                    f"CTE {name} сохранён.\n"
+                    f"Он будет доступен в окне 'Представления и CTE'."
+                )
+            except Exception as e:
+                app_logger.error(f"Ошибка сохранения CTE {name} в глобальное хранилище: {e}")
+                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить CTE:\n{e}")
             return
 
         try:
             self.on_save_cte(name, inner_sql)
             QMessageBox.information(self, "CTE", f"CTE {name} сохранён в модуле представлений.")
-            app_logger.info(f"CTE сохранён через CteBuilderWindow: {name}")
+            app_logger.info(f"CTE сохранён через CteBuilderWindow (через колбэк): {name}")
         except Exception as e:
             app_logger.error(f"Ошибка сохранения CTE {name}: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить CTE:\n{e}")
 
+
     def _save_as_view(self):
-        """Сохранить текущий подзапрос как VIEW в БД."""
+        # Сохранить текущий подзапрос как VIEW в БД
         sql_select = self._build_inner_select()
         name = self.cte_name_edit.text().strip()
         if not self._validate_object_name(name, "Имя представления"):
@@ -613,7 +869,7 @@ class CteBuilderWindow(QMainWindow):
             QMessageBox.critical(self, "Ошибка", f"Не удалось создать VIEW:\n{e}")
 
     def _save_as_mat_view(self):
-        """Сохранить текущий подзапрос как MATERIALIZED VIEW в БД."""
+        # Сохранить текущий подзапрос как MATERIALIZED VIEW в БД
         sql_select = self._build_inner_select()
         name = self.cte_name_edit.text().strip()
         if not self._validate_object_name(name, "Имя MATERIALIZED VIEW"):
@@ -621,8 +877,6 @@ class CteBuilderWindow(QMainWindow):
 
         try:
             with self.db.cursor() as cur:
-                # без IF NOT EXISTS — пусть Postgres честно ругается,
-                # если объект с таким именем уже есть
                 cur.execute(f"CREATE MATERIALIZED VIEW {name} AS {sql_select}")
 
             QMessageBox.information(
@@ -633,7 +887,7 @@ class CteBuilderWindow(QMainWindow):
             app_logger.info(f"Создано MATERIALIZED VIEW {name} через CTE-конструктор")
 
         except Exception as e:
-            # если имя занято (VIEW/таблица/другое mat view) — увидишь нормальную ошибку
+            # если имя занято
             app_logger.error(f"Ошибка создания MATERIALIZED VIEW {name}: {e}")
             QMessageBox.critical(
                 self,

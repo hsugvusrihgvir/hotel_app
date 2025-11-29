@@ -2,10 +2,10 @@ from typing import Optional, Set, Dict
 import re
 
 from PySide6.QtWidgets import (
-    QMainWindow, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem,
-    QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox,
-    QListWidget, QListWidgetItem, QFrame, QScrollArea, QHeaderView,
-    QTabWidget, QInputDialog, QDialog,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QInputDialog,
+    QLabel, QPushButton, QTableWidget, QTableWidgetItem, QDialog,
+    QListWidget, QListWidgetItem, QLineEdit, QComboBox, QTabWidget,
+    QMessageBox, QHeaderView, QAbstractItemView, QScrollArea, QFrame,
 )
 from PySide6.QtCore import Qt, QRegularExpression
 from PySide6.QtGui import QColor, QRegularExpressionValidator
@@ -17,18 +17,11 @@ from app.ui.cte_storage import GLOBAL_SAVED_CTES
 import re
 
 
-# ============================================================
+
 # ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ: WHERE и HAVING
-# ============================================================
+
 
 class WhereBuilderWidget(QWidget):
-    """
-    Простой конструктор WHERE:
-    - выбор колонки
-    - оператор (=, <>, >, <, >=, <=, LIKE, ILIKE)
-    - значение
-    - несколько условий, объединённых AND
-    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -80,10 +73,8 @@ class WhereBuilderWidget(QWidget):
         btn_delete.clicked.connect(self._delete_selected)
         btn_clear.clicked.connect(self.conditions_list.clear)
 
-        # двойной клик по условию — тоже удаляет его
         self.conditions_list.itemDoubleClicked.connect(self._on_item_double_clicked)
 
-    # ------------ API -------------
 
     def set_columns(self, columns: list[str], col_types: dict[str, str]):
         self.columns = list(columns)
@@ -97,7 +88,6 @@ class WhereBuilderWidget(QWidget):
             res.append(self.conditions_list.item(i).text())
         return res
 
-    # ------------ внутренняя логика -------------
 
     def _on_add_condition(self):
         col = self.cb_column.currentText().strip()
@@ -114,13 +104,12 @@ class WhereBuilderWidget(QWidget):
 
         data_type = self.col_types.get(col, "").lower()
 
-        # группы типов для простых проверок
+
         numeric_like = ("smallint", "integer", "bigint", "numeric", "real", "double")
         bool_like = ("boolean",)
         date_like = ("date", "timestamp", "timestamp with time zone", "time")
 
-        # страховка: не даём LIKE/ILIKE по числам, датам и bool,
-        # даже если вдруг оператор как-то сюда попал
+
         if op in ("LIKE", "ILIKE") and (
                 any(t in data_type for t in numeric_like)
                 or any(t in data_type for t in bool_like)
@@ -140,18 +129,16 @@ class WhereBuilderWidget(QWidget):
             QMessageBox.warning(self, "Ошибка значения", str(e))
             return
 
-        # здесь никакого CAST и прочей магии — ровно то, что выбрал пользователь
         self.conditions_list.addItem(f"{col} {op} {literal}")
         self.value_edit.clear()
 
     def _delete_selected(self):
-        """Удалить выбранные условия из списка."""
         for item in self.conditions_list.selectedItems():
             row = self.conditions_list.row(item)
             self.conditions_list.takeItem(row)
 
     def _on_item_double_clicked(self, item):
-        """Двойной клик по условию — удаление одной строки."""
+
         row = self.conditions_list.row(item)
         self.conditions_list.takeItem(row)
 
@@ -189,10 +176,7 @@ class WhereBuilderWidget(QWidget):
         return f"'{esc}'"
 
     def build_where_sql(self) -> str:
-        """
-        Собирает все условия в одну строку через AND.
-        Нужно и для DataWindow (если захочешь), и для CTE-конструктора.
-        """
+
         conditions = self.get_conditions()
         if not conditions:
             return ""
@@ -200,12 +184,7 @@ class WhereBuilderWidget(QWidget):
 
 
 class HavingBuilderWidget(QWidget):
-    """
-    Конструктор HAVING:
-    - агр. функция (COUNT/SUM/AVG/MIN/MAX)
-    - колонка
-    - оператор / значение
-    """
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -230,7 +209,7 @@ class HavingBuilderWidget(QWidget):
         self.cb_column = QComboBox()
         row.addWidget(self.cb_column)
 
-        # при смене колонки — пересобираем список допустимых операторов
+        # при смене колонки пересобираем список допустимых операторов
         self.cb_column.currentIndexChanged.connect(self._update_operators_for_column)
 
         row.addWidget(QLabel("Оператор:"))
@@ -253,7 +232,6 @@ class HavingBuilderWidget(QWidget):
         btn_clear.clicked.connect(self.conditions_list.clear)
         main.addWidget(btn_clear)
 
-    # ------------ API -------------
 
     def set_columns(self, columns: list[str], col_types: dict[str, str]):
         self.columns = list(columns)
@@ -270,16 +248,11 @@ class HavingBuilderWidget(QWidget):
         return res
 
     def build_having_sql(self) -> str:
-        """
-        То же самое, что get_conditions, но сразу одной строкой для HAVING.
-        Нужен CTE-конструктору.
-        """
         conditions = self.get_conditions()
         if not conditions:
             return ""
         return " AND ".join(conditions)
 
-    # ------------ внутренняя логика -------------
 
     def _on_add_condition(self):
         agg = self.cb_agg.currentText()
@@ -304,13 +277,10 @@ class HavingBuilderWidget(QWidget):
         self.conditions_list.addItem(f"{func} {op} {literal}")
         self.value_edit.clear()
 
-        # ------------ внутренняя логика -------------
+    # внутренняя логика
 
     def _update_operators_for_column(self):
-        """
-        Для HAVING оставляем только числовые сравнения.
-        Операторы не зависят от типа колонки, агрегаты всё равно дают число.
-        """
+
         current = self.cb_op.currentText()
 
         ops = ["=", "<>", ">", "<", ">=", "<="]
@@ -319,7 +289,6 @@ class HavingBuilderWidget(QWidget):
         self.cb_op.clear()
         self.cb_op.addItems(ops)
 
-        # если старый оператор ещё допустим — вернём его
         idx = self.cb_op.findText(current)
         if idx >= 0:
             self.cb_op.setCurrentIndex(idx)
@@ -327,7 +296,6 @@ class HavingBuilderWidget(QWidget):
         self.cb_op.blockSignals(False)
 
     def _format_literal(self, raw_val: str) -> str:
-        # для HAVING почти всегда нужно число
         try:
             float(raw_val.replace(",", "."))
         except ValueError:
@@ -335,9 +303,9 @@ class HavingBuilderWidget(QWidget):
         return raw_val
 
 
-# ============================================================
+
 # ОСНОВНОЕ ОКНО DataWindow
-# ============================================================
+
 
 class DataWindow(QMainWindow):
     """Окно расширенного SELECT с JOIN, фильтрами, группировками и поиском."""
@@ -364,7 +332,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Построение интерфейса
-    # ---------------------------------------------------------
 
     def _build_ui(self):
         central = QWidget()
@@ -410,13 +377,13 @@ class DataWindow(QMainWindow):
 
         main_layout.addWidget(save_panel)
 
-        # верх: слева — конструкторы, справа — панель строковых операций
+        # слева конструкторы, справа панель строковых операций
         top_container = QWidget()
         split = QHBoxLayout(top_container)
         split.setContentsMargins(0, 0, 0, 0)
         split.setSpacing(12)
 
-        # ---------- левый блок: скролл с секциями ----------
+        # левый блок: скролл с секциями
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         left_widget = QWidget()
@@ -425,7 +392,7 @@ class DataWindow(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
 
-        # --- табы с инструментами SELECT ---
+        # табы с инструментами SELECT
         tabs = QTabWidget()
         tabs.setDocumentMode(True)
         tabs.setTabPosition(QTabWidget.North)
@@ -444,7 +411,7 @@ class DataWindow(QMainWindow):
                     }
                 """)
 
-        # ===== Вкладка 1: ФИЛЬТРЫ =====
+        #  ФИЛЬТРЫ
         filters_tab = QWidget()
         filters_layout = QVBoxLayout(filters_tab)
         filters_layout.setContentsMargins(6, 6, 6, 6)
@@ -559,7 +526,7 @@ class DataWindow(QMainWindow):
         self.btn_apply_group = QPushButton("Применить группировку")
         self.btn_apply_group.clicked.connect(self._load_data)
 
-        # когда меняются режим/колонки/агрегат – обновляем допустимые ORDER BY
+        # когда меняются режим/колонки/агрегат обновляем допустимые ORDER BY
         self.group_mode.currentIndexChanged.connect(self._update_order_choices)
         self.group_col.currentIndexChanged.connect(self._update_order_choices)
         self.group_col2.currentIndexChanged.connect(self._update_order_choices)
@@ -572,20 +539,20 @@ class DataWindow(QMainWindow):
         gw_layout.setContentsMargins(0, 0, 0, 0)
         gw_layout.setSpacing(4)
 
-        # строка 1 — режим
+        # строка 1  режим
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel("Режим:"))
         mode_row.addWidget(self.group_mode)
         mode_row.addStretch()
 
-        # строка 2 — уровни группировки
+        # строка 2  уровни группировки
         cols_row = QHBoxLayout()
         cols_row.addWidget(QLabel("Уровни группировки:"))
         cols_row.addWidget(self.group_col)
         cols_row.addWidget(self.group_col2)
         cols_row.addWidget(self.group_col3)
 
-        # строка 3 — агрегат
+        # строка 3  агрегат
         agg_row = QHBoxLayout()
         agg_row.addWidget(QLabel("Агрегат:"))
         agg_row.addWidget(self.aggregate_func)
@@ -623,7 +590,6 @@ class DataWindow(QMainWindow):
 
         agg_layout.addStretch()
 
-        # ===== Вкладка 3: CASE / NULL =====
         case_tab = QWidget()
         case_layout = QVBoxLayout(case_tab)
         case_layout.setContentsMargins(6, 6, 6, 6)
@@ -632,7 +598,6 @@ class DataWindow(QMainWindow):
         self._build_case_null_section(case_layout)
         case_layout.addStretch()
 
-        # Добавляем вкладки в таб-виджет
         tabs.addTab(filters_tab, "Фильтры")
         tabs.addTab(agg_tab, "Агрегация")
         tabs.addTab(case_tab, "CASE / NULL")
@@ -646,10 +611,10 @@ class DataWindow(QMainWindow):
 
         split.addWidget(scroll, 3)
 
-        # ---------- правый блок: панель строковых операций ----------
+        #  правый блок: панель строковых операций
         self._build_string_panel(split)
 
-        # ---------- низ: таблица + поиск по результату ----------
+        # таблица + поиск по результат
         main_layout.addWidget(top_container)
 
         # строка поиска по уже полученной таблице
@@ -735,7 +700,7 @@ class DataWindow(QMainWindow):
         self.result_search_column.blockSignals(False)
 
     def _apply_result_filter(self):
-        """Фильтр по подстроке внутри выбранной колонки (кейс-инсенситив)."""
+        """Фильтр по подстроке внутри выбранной колонки"""
         if not hasattr(self, "result_search_edit") or self.table.rowCount() == 0:
             return
 
@@ -767,7 +732,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Панель строковых операций (справа)
-    # ---------------------------------------------------------
 
     def _build_string_panel(self, parent_layout: QHBoxLayout):
         panel = QFrame()
@@ -938,7 +902,7 @@ class DataWindow(QMainWindow):
 
         row = 0
 
-        # ---------- CASE ----------
+        #  CASE
         title_case = QLabel("CASE — вычисляемый столбец")
         title_case.setStyleSheet("color:#9CA3AF; font-size:11px;")
         grid.addWidget(title_case, row, 0, 1, 4)
@@ -983,7 +947,7 @@ class DataWindow(QMainWindow):
         grid.addWidget(self.btn_apply_case, row, 3)
         row += 1
 
-        # ---------- COALESCE ----------
+        #  COALESCE
         sep1 = QFrame()
         sep1.setFrameShape(QFrame.HLine)
         sep1.setFrameShadow(QFrame.Sunken)
@@ -1097,7 +1061,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Загрузка инфы о колонках
-    # ---------------------------------------------------------
 
     def _load_all_column_lists(self):
         all_cols = list(self.join_info.get("selected_columns", []))
@@ -1153,20 +1116,20 @@ class DataWindow(QMainWindow):
         self.order_col.clear()
 
         if not aggregate_mode:
-            # обычный режим — можно сортировать по любой колонке
+            # обычный режим
             if self._base_order_cols:
                 self.order_col.addItems(self._base_order_cols)
         else:
-            # агрегатный режим: только колонки группировки и agg_value
+            # агрегатный режим
             options: list[str] = []
 
             group_cols = self._get_group_columns()
             options.extend(group_cols)
 
-            # результат агрегата — алиас из SELECT
+            # результат агрегата
             options.append("agg_value")
 
-            # пустая строка = без сортировки
+            # пустая строка
             self.order_col.addItem("")
             seen: set[str] = set()
             for opt in options:
@@ -1174,7 +1137,6 @@ class DataWindow(QMainWindow):
                     self.order_col.addItem(opt)
                     seen.add(opt)
 
-        # если старое значение ещё допустимо — вернуть его
         idx = self.order_col.findText(current)
         if idx >= 0:
             self.order_col.setCurrentIndex(idx)
@@ -1183,9 +1145,6 @@ class DataWindow(QMainWindow):
 
     def _get_group_columns(self) -> list[str]:
         """Текущий набор колонок для группировки в заданном порядке.
-
-        Игнорируем пустые значения и дубликаты, чтобы не собирать
-        некорректные конструкции в GROUP BY / ROLLUP / CUBE.
         """
         cols: list[str] = []
         for cb in (self.group_col, self.group_col2, self.group_col3):
@@ -1198,10 +1157,6 @@ class DataWindow(QMainWindow):
 
     def _build_grouping_sets_sql(self, cols: list[str]) -> str:
         """Собрать выражение для GROUPING SETS по выбранным колонкам.
-
-        Строим все непустые комбинации колонок + пустое множество для
-        общего итога. Для 3 колонок получится, например:
-        GROUPING SETS ((a), (b), (c), (a, b), (a, c), (b, c), (a, b, c), ()).
         """
         if not cols:
             return ""
@@ -1290,7 +1245,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Подзапросы: таблицы и их колонки
-    # ---------------------------------------------------------
 
     def _load_subquery_tables(self):
         q = """
@@ -1328,13 +1282,10 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Строковые выражения для SELECT
-    # ---------------------------------------------------------
 
     def _build_string_expr(self) -> Optional[str]:
         """
-        Строит выражение для строковой операции, если она выбрана.
-        Важный момент: если выбран alias (виртуальная колонка),
-        берём его сохранённое выражение, а не имя alias в SQL.
+        Строит выражение для строковой операции, если она выбрана
         """
         self.current_string_alias = None
 
@@ -1347,22 +1298,18 @@ class DataWindow(QMainWindow):
         def esc_text(s: str) -> str:
             return s.replace("'", "''")
 
-        # исходное выражение для выбранного "столбца"
         if col in self.string_virtual_expr:
-            source_expr = self.string_virtual_expr[col]  # уже выражение, без alias
+            source_expr = self.string_virtual_expr[col]
         else:
-            source_expr = col  # обычное table.col
-
+            source_expr = col
         base_name = col.split(".")[-1]
         alias = f"{base_name}_{op.lower()}"
 
-        # считаем, что результат строковой операции — всегда text
         self.current_string_alias = alias
         self.string_virtual_columns.add(alias)
 
         col_text = f"({source_expr})::text"
 
-        # собираем "core" выражение (без AS alias)
         if op == "UPPER":
             expr_core = f"UPPER({col_text})"
 
@@ -1413,35 +1360,25 @@ class DataWindow(QMainWindow):
             self.current_string_alias = None
             return None
 
-        # сохраняем выражение для alias, чтобы потом можно было цеплять ещё операции
         self.string_virtual_expr[alias] = expr_core
 
         # чтобы можно было сортировать по новому столбцу
         if self.current_string_alias and self.order_col.findText(self.current_string_alias) == -1:
             self.order_col.addItem(self.current_string_alias)
 
-        # возвращаем уже с alias
         return f"{expr_core} AS {alias}"
 
     def _build_case_null_exprs(self) -> list[str]:
-        """
-        Строит вычисляемые столбцы:
-        - CASE ... END AS alias
-        - COALESCE(col, value) AS alias
-        - NULLIF(col, value) AS alias
-        Возвращает список строк вида 'expr AS alias'.
-        """
         exprs: list[str] = []
 
         def register_alias(alias: str, core_expr: str):
-            """Регистрируем новый виртуальный столбец, чтобы по нему можно было сортировать и дальше его использовать."""
             self.string_virtual_expr[alias] = core_expr
             self.string_virtual_columns.add(alias)
             if self.order_col.findText(alias) == -1:
                 self.order_col.addItem(alias)
             self.current_string_alias = alias
 
-        # ---------- CASE ----------
+        # CASE
         if hasattr(self, "case_col"):
             col = (self.case_col.currentText() or "").strip()
             op = (self.case_op.currentText() or "").strip()
@@ -1452,7 +1389,6 @@ class DataWindow(QMainWindow):
             else_raw = (self.case_else.text() or "").strip()
 
             if col and op and v1 and then_raw:
-                # alias по умолчанию, если пользователь не ввёл
                 if not alias:
                     base = col.split(".")[-1] or "col"
                     alias = f"{base}_case"
@@ -1488,7 +1424,7 @@ class DataWindow(QMainWindow):
                 except Exception as e:
                     QMessageBox.warning(self, "CASE", f"Не удалось построить CASE:\n{e}")
 
-        # ---------- COALESCE ----------
+        # COALESCE
         if hasattr(self, "coalesce_col"):
             col = (self.coalesce_col.currentText() or "").strip()
             alias = (self.coalesce_alias.text() or "").strip()
@@ -1509,7 +1445,7 @@ class DataWindow(QMainWindow):
                 except Exception as e:
                     QMessageBox.warning(self, "COALESCE", f"Не удалось построить COALESCE:\n{e}")
 
-        # ---------- NULLIF ----------
+        # NULLIF
         if hasattr(self, "nullif_col"):
             col = (self.nullif_col.currentText() or "").strip()
             alias = (self.nullif_alias.text() or "").strip()
@@ -1533,15 +1469,12 @@ class DataWindow(QMainWindow):
         return exprs
 
     def _ask_object_name(self, title: str, label: str) -> Optional[str]:
-        """Диалог запроса имени объекта (VIEW / MAT VIEW / CTE) с валидатором."""
+        # Диалог запроса имени объекта
         dlg = QInputDialog(self)
         dlg.setInputMode(QInputDialog.TextInput)
         dlg.setWindowTitle(title)
         dlg.setLabelText(label)
 
-        # навешиваем валидатор на поле ввода, чтобы нельзя было вводить
-        # недопустимые символы (только латиница, цифры и "_",
-        # первый символ — буква или подчёркивание)
         line_edit = dlg.findChild(QLineEdit)
         if line_edit is not None:
             regex = QRegularExpression(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -1557,7 +1490,6 @@ class DataWindow(QMainWindow):
             QMessageBox.warning(self, title, "Имя не может быть пустым.")
             return None
 
-        # дополнительная проверка на случай, если по какой-то причине
         # валидатор не сработал
         if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
             QMessageBox.warning(
@@ -1571,15 +1503,16 @@ class DataWindow(QMainWindow):
         return name
 
     def _get_current_select_sql(self) -> str:
-        """Построить SELECT для сохранения (без завершающей точки с запятой)."""
+        # сначала собираем полный запрос
         sql = self._build_sql()
+        # убираем пробелы по краям
         sql = sql.strip()
         if sql.endswith(";"):
             sql = sql[:-1].strip()
         return sql
 
     def _save_as_view(self):
-        """Сохранить текущий SELECT как обычное представление (VIEW)."""
+        # Сохранить текущий SELECT как обычное представление (VIEW)
         title = "Сохранить как VIEW"
         sql = self._get_current_select_sql()
         if not sql:
@@ -1591,7 +1524,6 @@ class DataWindow(QMainWindow):
             return
 
         try:
-            # helper из db.py: CREATE OR REPLACE VIEW name AS <sql>
             self.db.create_view(name, sql)
             QMessageBox.information(
                 self,
@@ -1609,7 +1541,7 @@ class DataWindow(QMainWindow):
             )
 
     def _save_as_mat_view(self):
-        """Сохранить текущий SELECT как материализованное представление."""
+        # Сохранить текущий SELECT как материализованное представление.
         title = "Сохранить как MATERIALIZED VIEW"
         sql = self._get_current_select_sql()
         if not sql:
@@ -1641,7 +1573,7 @@ class DataWindow(QMainWindow):
             )
 
     def _save_as_cte(self):
-        """Сохранить текущий SELECT как CTE в менеджере представлений."""
+        # Сохранить текущий SELECT как CTE в менеджере предста
         title = "Сохранить как CTE"
         sql = self._get_current_select_sql()
         if not sql:
@@ -1674,7 +1606,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # SQL builder
-    # ---------------------------------------------------------
 
     def _build_sql(self) -> str:
         info = self.join_info
@@ -1692,16 +1623,13 @@ class DataWindow(QMainWindow):
         else:
             base_cols = all_cols if all_cols else []
 
-        # безопасный SELECT-список: алиасим table.col → table_col
         select_parts: list[str] = []
         for c in base_cols:
             upper = c.upper()
-            # если пользователь уже сам написал "expr AS alias" — не трогаем
             if " AS " in upper:
                 select_parts.append(c)
                 continue
 
-            # table.col → table_col, убираем точки и кавычки
             alias = c.replace('"', "").replace(".", "_")
             select_parts.append(f"{c} AS {alias}")
 
@@ -1711,7 +1639,7 @@ class DataWindow(QMainWindow):
             self.aggregate_func.currentText() and self.aggregate_target.currentText()
         )
 
-        # вычисляемые столбцы (строковые операции + CASE/NULL)
+        # вычисляемые столбцы
         extra_exprs: list[str] = []
 
         str_expr = self._build_string_expr()
@@ -1726,11 +1654,20 @@ class DataWindow(QMainWindow):
             extra_sql = ", ".join(extra_exprs)
             cols = f"{cols}, {extra_sql}" if cols.strip() else extra_sql
 
-        # агрегат (если указан) перекрывает обычный SELECT
+            # агрегат
         if aggregate_mode:
             func = self.aggregate_func.currentText()
             target = self.aggregate_target.currentText()
-            cols = f"{func}({target}) AS agg_value"
+            agg_expr = f"{func}({target}) AS agg_value"
+
+            # текущие уровни группировки (clients.last_name и т.п.)
+            group_cols = self._get_group_columns()
+
+            if group_cols:
+                cols = ", ".join(group_cols + [agg_expr])
+            else:
+                # если группировки нет
+                cols = agg_expr
 
         q = (
             f"SELECT {cols} "
@@ -1750,7 +1687,7 @@ class DataWindow(QMainWindow):
             val = self.search_value.text().strip()
             esc = val.replace("'", "''")
 
-            # тип колонки — чтобы понимать, текстовая она или нет
+            # тип колонки
             data_type = self.col_types.get(col, "").lower()
             is_text = any(x in data_type for x in ("char", "text"))
 
@@ -1819,7 +1756,7 @@ class DataWindow(QMainWindow):
                 if sets_sql:
                     q += f" GROUP BY GROUPING SETS ({sets_sql})"
             else:
-                # на всякий случай — как обычный GROUP BY
+                # на всякий случай как обычный GROUP BY
                 group_expr = ", ".join(group_cols)
                 q += f" GROUP BY {group_expr}"
 
@@ -1837,7 +1774,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Подсветка вычисленного столбца
-    # ---------------------------------------------------------
 
     def _highlight_string_column(self):
         alias = self.current_string_alias
@@ -1855,8 +1791,8 @@ class DataWindow(QMainWindow):
             return
 
         # спокойный, но заметный цвет для нового столбца
-        highlight_bg = QColor("#064e3b")   # тёмно-зелёный
-        header_bg = QColor("#047857")      # чуть ярче для заголовка
+        highlight_bg = QColor("#064e3b") # тёмно-зелёный
+        header_bg = QColor("#047857") # чуть ярче для заголовка
 
         for r in range(self.table.rowCount()):
             item = self.table.item(r, col_index)
@@ -1874,7 +1810,6 @@ class DataWindow(QMainWindow):
 
     # ---------------------------------------------------------
     # Загрузка и отображение данных
-    # ---------------------------------------------------------
 
     def _load_data(self):
         try:

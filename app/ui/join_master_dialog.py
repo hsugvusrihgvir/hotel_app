@@ -177,6 +177,11 @@ class JoinMasterDialog(QDialog):
         self.cb_join_type.addItems(["INNER", "LEFT", "RIGHT", "FULL"])
         layout.addWidget(self.cb_join_type)
 
+        self.cb_table1.setCurrentText("clients")
+        self.cb_table2.setCurrentText("stays")
+        self.cb_col1.setCurrentText("id")
+        self.cb_col2.setCurrentText("client_id")
+
         # кнопки
         btns = QHBoxLayout()
         self.btn_ok = QPushButton("Продолжить")
@@ -184,6 +189,7 @@ class JoinMasterDialog(QDialog):
         btns.addWidget(self.btn_ok)
         btns.addWidget(self.btn_cancel)
         layout.addLayout(btns)
+
 
         # сигналы
         self.btn_cancel.clicked.connect(self.reject)
@@ -203,9 +209,23 @@ class JoinMasterDialog(QDialog):
             cur.execute(q)
             tables = [r["table_name"] for r in cur.fetchall()]
 
+        self.cb_table1.clear()
+        self.cb_table2.clear()
         self.cb_table1.addItems(tables)
         self.cb_table2.addItems(tables)
 
+        # --- дефолты по таблицам ---
+        if "clients" in tables:
+            self.cb_table1.setCurrentIndex(tables.index("clients"))
+        elif tables:
+            self.cb_table1.setCurrentIndex(0)
+
+        if "stays" in tables:
+            self.cb_table2.setCurrentIndex(tables.index("stays"))
+        elif len(tables) > 1:
+            self.cb_table2.setCurrentIndex(1)
+
+        # после выбора таблиц подгружаем поля
         self._load_cols_1()
         self._load_cols_2()
 
@@ -213,15 +233,19 @@ class JoinMasterDialog(QDialog):
         table = self.cb_table1.currentText()
         self._load_columns(table, self.cb_col1)
 
+        # дефолт для поля связи в таблице 1
+        if self.cb_col1.count():
+            idx = self.cb_col1.findText("id")
+            if idx >= 0:
+                self.cb_col1.setCurrentIndex(idx)
+
     def _load_cols_2(self):
         table2 = self.cb_table2.currentText()
 
-        # тип первого столбца
         table1 = self.cb_table1.currentText()
         col1 = self.cb_col1.currentText()
         type1 = self._get_column_type(table1, col1)
 
-        # загружаем только совместимые по типу поля для связи
         compatible = []
         for col in self._fetch_columns_full(table2):
             if self._is_compatible(type1, col["data_type"]):
@@ -229,6 +253,18 @@ class JoinMasterDialog(QDialog):
 
         self.cb_col2.clear()
         self.cb_col2.addItems(compatible)
+
+        # дефолт для client_id, если мы на stays
+        if compatible:
+            preferred = "client_id" if table2 == "stays" else None
+            if preferred:
+                idx = self.cb_col2.findText(preferred)
+                if idx >= 0:
+                    self.cb_col2.setCurrentIndex(idx)
+                else:
+                    self.cb_col2.setCurrentIndex(0)
+            else:
+                self.cb_col2.setCurrentIndex(0)
 
     def _load_columns(self, table, combo):
         combo.clear()

@@ -1,13 +1,153 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QLineEdit, QTableWidget, QTableWidgetItem,
-    QHeaderView, QMessageBox
+    QHeaderView, QMessageBox, QDialog, QComboBox   # ← добавили QDialog, QComboBox
 )
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
 
 from app.log.log import app_logger
 from app.ui.theme import *
+
+
+class CompositeFieldsDialog(QDialog):
+    """
+    Диалог ввода полей составного типа:
+    несколько строк вида: имя_поля + тип данных (из списка или вручную).
+    """
+
+    def __init__(self, base_types: list[str], user_types: list[str] | None = None, parent=None):
+        super().__init__(parent)
+        self.base_types = base_types
+        self.user_types = user_types or []
+        self._fields: list[tuple[str, str]] = []
+
+        self.setWindowTitle("Поля составного типа")
+        self.resize(440, 260)
+        self.setModal(True)
+
+        # немножко красоты в духе остального приложения
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {WINDOW_BG};
+                color: {TEXT_MAIN};
+            }}
+            QLineEdit, QComboBox {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 2px solid {CARD_BORDER};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+            }}
+            QLineEdit::placeholder {{
+                color: {TEXT_MUTED};
+                font-style: italic;
+            }}
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border: 1px solid {BTN_BORDER};
+                border-radius: 8px;
+                padding: 6px 12px;
+                font-size: 13px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+            }}
+        """)
+
+        main = QVBoxLayout(self)
+        main.setContentsMargins(16, 16, 16, 16)
+        main.setSpacing(10)
+
+        lbl = QLabel("Добавьте поля составного типа.\nКаждая строка: имя поля и тип данных.")
+        lbl.setWordWrap(True)
+        main.addWidget(lbl)
+
+        # сюда кладём строки с полями
+        self.fields_layout = QVBoxLayout()
+        self.fields_layout.setSpacing(6)
+        main.addLayout(self.fields_layout, 1)
+
+        # кнопка "Добавить поле"
+        btn_add_row = QPushButton("Добавить поле")
+        btn_add_row.clicked.connect(self._add_row)
+        main.addWidget(btn_add_row, alignment=Qt.AlignLeft)
+
+        # нижние кнопки OK / Cancel
+        bottom = QHBoxLayout()
+        bottom.addStretch(1)
+        self.btn_ok = QPushButton("OK")
+        self.btn_cancel = QPushButton("Отмена")
+        self.btn_ok.clicked.connect(self.accept)
+        self.btn_cancel.clicked.connect(self.reject)
+        bottom.addWidget(self.btn_ok)
+        bottom.addWidget(self.btn_cancel)
+        main.addLayout(bottom)
+
+        self._rows: list[tuple[QLineEdit, QComboBox]] = []
+        self._add_row()  # хотя бы одна строка по умолчанию
+
+    def _add_row(self):
+        row_widget = QWidget()
+        row_layout = QHBoxLayout(row_widget)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(6)
+
+        name_edit = QLineEdit()
+        name_edit.setPlaceholderText("имя_поля")
+
+        type_combo = QComboBox()
+        type_combo.setEditable(True)                  # можно выбрать или вписать своё
+        type_combo.addItems(self.base_types)
+        if self.user_types:
+            type_combo.insertSeparator(type_combo.count())
+            type_combo.addItems(self.user_types)
+
+        row_layout.addWidget(QLabel("Имя:"))
+        row_layout.addWidget(name_edit, 1)
+        row_layout.addWidget(QLabel("Тип:"))
+        row_layout.addWidget(type_combo, 1)
+
+        self.fields_layout.addWidget(row_widget)
+        self._rows.append((name_edit, type_combo))
+
+    def accept(self):
+        fields: list[tuple[str, str]] = []
+        for name_edit, type_combo in self._rows:
+            fname = (name_edit.text() or "").strip()
+            ftype = (type_combo.currentText() or "").strip()
+
+            # полностью пустую строку игнорируем
+            if not fname and not ftype:
+                continue
+
+            # если одна часть заполнена, а другая нет — ругаемся
+            if not fname or not ftype:
+                QMessageBox.warning(
+                    self,
+                    "Неверный ввод",
+                    "У каждого поля должно быть и имя, и тип данных."
+                )
+                return
+
+            fields.append((fname, ftype))
+
+        if not fields:
+            QMessageBox.warning(self, "Нет полей", "Нужно указать хотя бы одно поле.")
+            return
+
+        self._fields = fields
+        super().accept()
+
+    def get_fields(self) -> list[tuple[str, str]]:
+        return getattr(self, "_fields", [])
+
 
 # окно управления пользовательскими типами (ENUM + COMPOSITE)
 class TypesWindow(QMainWindow):
@@ -366,49 +506,47 @@ class TypesWindow(QMainWindow):
         self._load_types()
 
     def _on_new_composite(self):
-        # создание нового составного типа
+        # 1) спрашиваем имя типа
         name, ok = self._prompt("Создать COMPOSITE", "Имя нового составного типа (без схемы):")
         if not ok:
             return
 
-        name = name.strip()
+        name = (name or "").strip()
         if not name:
             return
 
-        fields_str, ok = self._prompt(
-            "Создать COMPOSITE",
-            "Поля (формат: field1 type1, field2 type2, ...):"
-        )
-        if not ok:
+        # 2) подготовим список базовых типов + пользовательских (ENUM/COMPOSITE),
+        #    чтобы можно было выбрать тип как в окне изменения структуры
+        base_types = [
+            "INTEGER",
+            "BIGINT",
+            "SMALLINT",
+            "NUMERIC(10,2)",
+            "BOOLEAN",
+            "DATE",
+            "TIMESTAMP",
+            "VARCHAR(50)",
+            "VARCHAR(100)",
+            "TEXT",
+        ]
+
+        try:
+            user_types = self.db.get_user_types()
+            user_type_names = [t["name"] for t in user_types]
+        except Exception as e:
+            app_logger.error(f"Не удалось получить пользовательские типы при создании COMPOSITE: {e}")
+            user_type_names = []
+
+        # 3) открываем красивый диалог ввода полей
+        dlg = CompositeFieldsDialog(base_types, user_type_names, parent=self)
+        if dlg.exec() != QDialog.Accepted:
             return
 
-        raw_parts = [p.strip() for p in (fields_str or "").split(",") if p.strip()]
-        fields: list[tuple[str, str]] = []
-
-        for part in raw_parts:
-            # делим на имя и тип
-            pieces = part.split(None, 1)
-            if len(pieces) != 2:
-                QMessageBox.warning(
-                    self,
-                    "Неверный формат",
-                    f"Не удалось разобрать поле: «{part}».\nОжидается «имя_поля тип_данных»."
-                )
-                return
-            fname, ftype = pieces[0].strip(), pieces[1].strip()
-            if not fname or not ftype:
-                QMessageBox.warning(
-                    self,
-                    "Неверный формат",
-                    f"Не удалось разобрать поле: «{part}»."
-                )
-                return
-            fields.append((fname, ftype))
-
+        fields = dlg.get_fields()
         if not fields:
-            QMessageBox.warning(self, "Предупреждение", "Нужно указать хотя бы одно поле.")
             return
 
+        # 4) создаём тип в базе
         try:
             self.db.create_composite_type(name, fields)
         except Exception as e:
