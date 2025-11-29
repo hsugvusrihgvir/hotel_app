@@ -15,6 +15,7 @@ from app.ui.collapsible_section import CollapsibleSection
 from app.ui.cte_storage import GLOBAL_SAVED_CTES
 
 import re
+from app.ui.theme import *
 
 
 
@@ -337,6 +338,158 @@ class DataWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
 
+        self.setStyleSheet(f"""
+                    QDialog {{
+                        background-color: {WINDOW_BG};
+                        color: {TEXT_MAIN};
+                    }}
+                    QGroupBox {{
+                        background-color: {CARD_BG};
+                        color: {TEXT_SOFT};
+                        border: 5px solid {CARD_BORDER};
+                        border-radius: 12px;
+                        border-right: 0.5px solid {ACCENT_PRIMARY};
+                        margin-top: 18px;
+                        padding: 10px 10px 14px 10px;
+                        font-weight: bold;
+                        font-size: 16px;
+                    }}
+                    QGroupBox::title {{
+                        subcontrol-origin: margin;
+                        left: 12px;
+                        padding: 0 6px;
+                        background-color: {CARD_BG};
+                        color: {ACCENT_PRIMARY};
+                        font-weight: bold;
+                    }}
+                    QTableWidget {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        gridline-color: #404040;
+                        border: 1px solid {CARD_BORDER};
+                        border-radius: 8px;
+                    }}
+                    QTableWidget::item {{
+                        padding: 6px;
+                        border-bottom: 1px solid {CARD_BORDER};
+                    }}
+                    QTableWidget::item:selected {{
+                        background-color: {ACCENT_PRIMARY};
+                        color: {WINDOW_BG};
+                        font-weight: bold;
+                    }}
+                    QHeaderView::section {{
+                        background-color: {CARD_BG};
+                        color: {TEXT_SOFT};
+                        padding: 8px;
+                        border: none;
+                        border-right: 1px solid {CARD_BORDER};
+                        border-bottom: 1px solid {CARD_BORDER};
+                        font-weight: bold;
+                    }}
+                    QLineEdit, QComboBox {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        border: 2px solid {CARD_BORDER};
+                        border-radius: 6px;
+                        padding: 6px 10px;
+                        font-size: 13px;
+                        selection-background-color: {ACCENT_PRIMARY};
+                    }}
+                    QLineEdit:focus, QComboBox:focus {{
+                        border-color: {ACCENT_PRIMARY};
+                    }}
+                    QLineEdit::placeholder {{
+                        color: {TEXT_MUTED};
+                        font-style: italic;
+                    }}
+                    QComboBox QAbstractItemView {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        border: 1px solid {CARD_BORDER};
+                        selection-background-color: {ACCENT_PRIMARY};
+                        selection-color: {WINDOW_BG};
+                    }}
+                    QComboBox::drop-down {{
+                        border: none;
+                    }}
+                    QComboBox::down-arrow {{
+                        border: none;
+                        width: 12px;
+                        height: 12px;
+                        background-color: {ACCENT_PRIMARY};
+                        border-radius: 2px;
+                    }}
+                    QLabel {{
+                        color: {TEXT_SOFT};
+                        font-weight: bold;
+                        font-size: 12px;
+                    }}
+                    QScrollArea {{
+                        background-color: {WINDOW_BG};
+                        border: none;
+                    }}
+                    QScrollBar:vertical {{
+                        background-color: {CARD_BG};
+                        width: 8px;
+                        border-radius: 4px;
+                    }}
+                    QScrollBar::handle:vertical {{
+                        background-color: {ACCENT_PRIMARY};
+                        border-radius: 4px;
+                        min-height: 20px;
+                    }}
+                    QScrollBar::handle:vertical:hover {{
+                        background-color: {ACCENT_SUCCESS};
+                    }}
+                    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                        border: none;
+                        background: none;
+                        height: 0px;
+                    }}
+                    QPushButton {{
+                        background-color: {BTN_BG};
+                        color: {BTN_TEXT};
+                        border-radius: 8px;
+                        padding: 6px 14px;
+                        font-size: 14px;
+                        font-weight: 500;
+                    }}
+                    QPushButton:hover {{
+                        background-color: {BTN_BG_HOVER};
+                    }}
+                    QPushButton:pressed {{
+                        background-color: {BTN_BG_PRESSED};
+                    }}
+                    QMainWindow {{
+                        background-color: {WINDOW_BG};
+                        color: {TEXT_MAIN};
+                    }}
+                    QWidget {{
+                        background-color: {WINDOW_BG};
+                        color: {TEXT_MAIN};
+                    }}
+                    QTableWidget {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        gridline-color: #404040;
+                        border: 1px solid {CARD_BORDER};
+                        border-radius: 8px;
+                        alternate-background-color: {CARD_BG}; /* для чередующихся строк */
+                    }}
+                    QTableWidget::item {{
+                        background-color: {CENTRAL_BG};
+                        color: {TEXT_MAIN};
+                        padding: 6px;
+                        border-bottom: 1px solid {CARD_BORDER};
+                    }}
+                    QTableWidget::item:selected {{
+                        background-color: {ACCENT_PRIMARY};
+                        color: {WINDOW_BG};
+                        font-weight: bold;
+                    }}
+        """)
+
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.setSpacing(10)
@@ -348,7 +501,6 @@ class DataWindow(QMainWindow):
         save_layout.setSpacing(10)
 
         lbl_save = QLabel("Сохранить текущий SELECT как:")
-        lbl_save.setStyleSheet("color: #e5e7eb; font-weight: 600;")
 
         self.btn_save_view = QPushButton("VIEW")
         self.btn_save_mat_view = QPushButton("MATERIALIZED VIEW")
@@ -356,18 +508,6 @@ class DataWindow(QMainWindow):
 
         for btn in (self.btn_save_view, self.btn_save_mat_view, self.btn_save_cte):
             btn.setMinimumHeight(32)
-            btn.setStyleSheet(
-                "QPushButton {"
-                "  background-color: #4b5563;"
-                "  color: #e5e7eb;"
-                "  padding: 6px 12px;"
-                "  border-radius: 6px;"
-                "  font-weight: 600;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #6b7280;"
-                "}"
-            )
 
         save_layout.addWidget(lbl_save)
         save_layout.addWidget(self.btn_save_view)
@@ -539,13 +679,13 @@ class DataWindow(QMainWindow):
         gw_layout.setContentsMargins(0, 0, 0, 0)
         gw_layout.setSpacing(4)
 
-        # строка 1  режим
+        # строка 1 режим
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel("Режим:"))
         mode_row.addWidget(self.group_mode)
         mode_row.addStretch()
 
-        # строка 2  уровни группировки
+        # строка 2 уровни группировки
         cols_row = QHBoxLayout()
         cols_row.addWidget(QLabel("Уровни группировки:"))
         cols_row.addWidget(self.group_col)
@@ -657,28 +797,25 @@ class DataWindow(QMainWindow):
         self._load_subquery_tables()
         self._load_string_op_columns()
 
-        self._apply_table_style()
+        self.table.setStyleSheet("""
+                    QTableWidget {
+                        background-color: #111827;
+                        gridline-color: #374151;
+                        selection-background-color: #4B5563;
+                        selection-color: #F9FAFB;
+                    }
+                    QHeaderView::section {
+                        background-color: #020617;
+                        color: #E5E7EB;
+                        border: 1px solid #1F2933;
+                        padding: 4px;
+                    }
+                """)
 
         # сохранение запроса как VIEW / MATERIALIZED VIEW / CTE
         self.btn_save_view.clicked.connect(self._save_as_view)
         self.btn_save_mat_view.clicked.connect(self._save_as_mat_view)
         self.btn_save_cte.clicked.connect(self._save_as_cte)
-
-    def _apply_table_style(self):
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: #111827;
-                gridline-color: #374151;
-                selection-background-color: #4B5563;
-                selection-color: #F9FAFB;
-            }
-            QHeaderView::section {
-                background-color: #020617;
-                color: #E5E7EB;
-                border: 1px solid #1F2933;
-                padding: 4px;
-            }
-        """)
 
     def _update_result_search_columns(self):
         """Обновляет список колонок для фильтрации по результату."""
@@ -1059,7 +1196,6 @@ class DataWindow(QMainWindow):
 
         self.str_help.setText(help_text)
 
-    # ---------------------------------------------------------
     # Загрузка инфы о колонках
 
     def _load_all_column_lists(self):
