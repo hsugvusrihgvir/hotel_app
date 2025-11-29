@@ -351,7 +351,7 @@ class EnterDataDialog(QDialog):
             return combo
 
         # массивы
-        if dtype_lower.endswith("[]"):
+        if dtype_lower == "array" or dtype_lower.endswith("[]"):
             edit = QLineEdit()
             edit.setPlaceholderText("Значения через запятую...")
             self._style_edit(edit)
@@ -503,13 +503,14 @@ class EnterDataDialog(QDialog):
                 result[name] = value
                 continue
 
-            elif dtype_lower.endswith("[]"):
-                # массивы
-                if value:  # проверяем, что строка не пустая
-                    arr = [x.strip() for x in value.split(",") if x.strip()]
-                    result[name] = arr
+
+
+            elif dtype_lower == "array" or dtype_lower.endswith("[]"):
+                if value:
+                    items = [x.strip() for x in value.split(",") if x.strip()]
+                    result[name] = items
                 else:
-                    result[name] = []  # пустой массив
+                    result[name] = []
 
             elif dtype_lower in ("integer", "int4", "bigint", "smallint"):
                 # целые числа
