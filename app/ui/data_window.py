@@ -1893,7 +1893,6 @@ class DataWindow(QMainWindow):
                 cond = ""
 
                 if mode in ("EXISTS", "NOT EXISTS"):
-                    # EXISTS (SELECT 1 FROM table [WHERE ...])
                     if table:
                         sub_sql = f"(SELECT 1 FROM {table}"
                         if where_expr:

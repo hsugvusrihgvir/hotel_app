@@ -337,7 +337,7 @@ class EnterDataDialog(QDialog):
                 combo = QComboBox()
                 combo.addItem("")  # пустой вариант
                 for id_, label in options:
-                    combo.addItem(f"{id_} — {label}", userData=id_)
+                    combo.addItem(f"{id_}", userData=id_)
                 self._style_combo(combo)
                 return combo
             except Exception as e:
