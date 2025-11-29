@@ -36,8 +36,8 @@
 ### 1. Клонировать репозиторий
 
 ```bash
-git clone <ссылка-на-репозиторий>
-cd <папка-проекта>
+git clone https://github.com/hsugvusrihgvir/hotel_app
+cd hotel_app
 ```
 
 ### 2. Создать виртуальное окружение и установить зависимости
