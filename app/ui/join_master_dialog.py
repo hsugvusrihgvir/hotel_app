@@ -123,7 +123,22 @@ class JoinMasterDialog(QDialog):
                 border: none;
                 background: none;
                 height: 0px;
-            }}""")
+            }}
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 14px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+            }}
+""")
 
         self.table1 = None
         self.table2 = None

@@ -12,6 +12,7 @@ from app.ui.collapsible_section import CollapsibleSection
 from app.ui.data_window import WhereBuilderWidget, HavingBuilderWidget
 
 import re
+from app.ui.theme import *
 
 class CteBuilderWindow(QMainWindow):
     # Окно-конструктор CTE (WITH-запросов).
@@ -39,12 +40,199 @@ class CteBuilderWindow(QMainWindow):
         self._load_sources()
         self._reload_columns()
 
-    # ------------------------------------------------------------------
-    # UI
-
     def _build_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
+        self.setStyleSheet(f"""
+        QWidget QWidget {{
+            background-color: {WINDOW_BG};
+        }}
+        QTabWidget::pane {{
+            border: 1px solid {CARD_BORDER};
+            background-color: {WINDOW_BG};
+        }}
+        QTabWidget::tab-bar {{
+            alignment: left;
+        }}
+        QTabBar::tab {{
+            background-color: {CARD_BG};
+            color: {TEXT_SOFT};
+            padding: 8px 16px;
+            margin-right: 2px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }}
+        QTabBar::tab:selected {{
+            background-color: {WINDOW_BG};
+            color: {TEXT_MAIN};
+            border-bottom: 2px solid {ACCENT_PRIMARY};
+        }}
+        QTabBar::tab:hover:!selected {{
+            background-color: {BTN_BG_HOVER};
+        }}
+        QScrollArea QWidget {{
+            background-color: {WINDOW_BG};
+        }}
+            QMainWindow, QDialog, QWidget {{
+                background-color: {WINDOW_BG};
+                color: {TEXT_MAIN};
+            }}
+            QGroupBox {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                border: 5px solid {CARD_BORDER};
+                border-radius: 12px;
+                border-right: 0.5px solid {ACCENT_PRIMARY};
+                margin-top: 18px;
+                padding: 10px 10px 14px 10px;
+                font-weight: bold;
+                font-size: 16px;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 12px;
+                padding: 0 6px;
+                background-color: {CARD_BG};
+                color: {ACCENT_PRIMARY};
+                font-weight: bold;
+            }}
+            QTableWidget {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                gridline-color: #404040;
+                border: 1px solid {CARD_BORDER};
+                border-radius: 8px;
+                alternate-background-color: {CARD_BG};
+            }}
+            QTableWidget::item {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                padding: 6px;
+                border-bottom: 1px solid {CARD_BORDER};
+            }}
+            QTableWidget::item:selected {{
+                background-color: {ACCENT_PRIMARY};
+                color: {WINDOW_BG};
+                font-weight: bold;
+            }}
+            QHeaderView::section {{
+                background-color: {CARD_BG};
+                color: {TEXT_SOFT};
+                padding: 8px;
+                border: none;
+                border-right: 1px solid {CARD_BORDER};
+                border-bottom: 1px solid {CARD_BORDER};
+                font-weight: bold;
+            }}
+            QLineEdit, QComboBox {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 2px solid {CARD_BORDER};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 13px;
+                selection-background-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit:focus, QComboBox:focus {{
+                border-color: {ACCENT_PRIMARY};
+            }}
+            QLineEdit::placeholder {{
+                color: {TEXT_MUTED};
+                font-style: italic;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                selection-background-color: {ACCENT_PRIMARY};
+                selection-color: {WINDOW_BG};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox::down-arrow {{
+                border: none;
+                width: 12px;
+                height: 12px;
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 2px;
+            }}
+            QLabel {{
+                color: {TEXT_SOFT};
+                font-weight: bold;
+                font-size: 12px;
+            }}
+            QScrollArea {{
+                background-color: {WINDOW_BG};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {CARD_BG};
+                width: 8px;
+                border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {ACCENT_PRIMARY};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {ACCENT_SUCCESS};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+                height: 0px;
+            }}
+            QPushButton {{
+                background-color: {BTN_BG};
+                color: {BTN_TEXT};
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-size: 14px;
+                font-weight: 500;
+                border: none;
+            }}
+            QPushButton:hover {{
+                background-color: {BTN_BG_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {BTN_BG_PRESSED};
+            }}
+            QPushButton[text="VIEW"],
+            QPushButton[text="MATERIALIZED VIEW"], 
+            QPushButton[text="CTE"] {{
+                background-color: {ACCENT_PRIMARY};
+                color: white;
+                font-weight: bold;
+                min-height: 32px;
+            }}
+            QPushButton[text="VIEW"]:hover,
+            QPushButton[text="MATERIALIZED VIEW"]:hover,
+            QPushButton[text="CTE"]:hover {{
+                background-color: {ACCENT_SUCCESS};
+            }}
+            QListWidget {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border: 1px solid {CARD_BORDER};
+                border-radius: 6px;
+                outline: none;
+            }}
+            QListWidget::item {{
+                background-color: {CENTRAL_BG};
+                color: {TEXT_MAIN};
+                border-bottom: 1px solid {CARD_BORDER};
+                padding: 6px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {ACCENT_PRIMARY};
+                color: {WINDOW_BG};
+            }}
+            QListWidget::item:hover {{
+                background-color: {BTN_BG_HOVER};
+            }}
+        """)
 
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(12, 12, 12, 12)
@@ -269,7 +457,6 @@ class CteBuilderWindow(QMainWindow):
 
         # ---------- CASE ----------
         title_case = QLabel("CASE — вычисляемый столбец")
-        title_case.setStyleSheet("color:#9CA3AF; font-size:11px;")
         grid.addWidget(title_case, row, 0, 1, 4)
         row += 1
 
@@ -312,7 +499,7 @@ class CteBuilderWindow(QMainWindow):
         grid.addWidget(self.btn_apply_case, row, 3)
         row += 1
 
-        # ---------- COALESCE ----------
+        # COALESCE
         sep1 = QFrame()
         sep1.setFrameShape(QFrame.HLine)
         sep1.setFrameShadow(QFrame.Sunken)
@@ -320,7 +507,6 @@ class CteBuilderWindow(QMainWindow):
         row += 1
 
         title_coa = QLabel("COALESCE — заменить NULL значением")
-        title_coa.setStyleSheet("color:#9CA3AF; font-size:11px;")
         grid.addWidget(title_coa, row, 0, 1, 4)
         row += 1
 
@@ -344,7 +530,7 @@ class CteBuilderWindow(QMainWindow):
         grid.addWidget(self.btn_apply_coalesce, row, 3)
         row += 1
 
-        # ---------- NULLIF ----------
+        # NULLIF
         sep2 = QFrame()
         sep2.setFrameShape(QFrame.HLine)
         sep2.setFrameShadow(QFrame.Sunken)
@@ -352,7 +538,6 @@ class CteBuilderWindow(QMainWindow):
         row += 1
 
         title_nullif = QLabel("NULLIF — NULL, если значения равны")
-        title_nullif.setStyleSheet("color:#9CA3AF; font-size:11px;")
         grid.addWidget(title_nullif, row, 0, 1, 4)
         row += 1
 
