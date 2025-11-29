@@ -484,14 +484,18 @@ class EnterDataDialog(QDialog):
 
             # обработка пустых значений
             if not value:
-                if not nullable and default is None:
+                # если у колонки есть DEFAULT, вообще не передаём её в INSERT —
+                # база сама подставит выражение по умолчанию (в т.ч. '{}'::text[])
+                if default is not None:
+                    continue
+
+                # если NULL запрещён и default нет — ругаемся
+                if not nullable:
                     raise ValueError(f"Поле '{name}' обязательно для заполнения")
-                elif default is not None:
-                    result[name] = default # используем значение по умолчанию
-                    continue
-                else:
-                    result[name] = None
-                    continue
+
+                # иначе пишем NULL
+                result[name] = None
+                continue
 
             dtype_lower = (dtype or "").lower()
 

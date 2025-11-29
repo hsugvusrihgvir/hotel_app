@@ -614,23 +614,49 @@ class DataWindow(QMainWindow):
 
         self.sub_table = QComboBox()
         self.sub_right_col = QComboBox()
-        self.sub_where = QLineEdit()
-        self.sub_where.setPlaceholderText("Доп. WHERE для подзапроса (опционально)")
+
+        self.sub_where = QComboBox()
+        self.sub_where.setEditable(True)
+        self.sub_where.setInsertPolicy(QComboBox.InsertAtTop)
+        self.sub_where.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+
+        self.sub_where.setPlaceholderText(
+            "Условие в подзапросе, напр.: id = 1 или status = 'active'"
+        )
+
+
+        self.sub_where.addItem("id = 1")
+        self.sub_where.addItem("status = 'active'")
+        self.sub_where.addItem("id = clients.id")
 
         self.btn_apply_sub = QPushButton("Применить подзапрос")
         self.btn_apply_sub.clicked.connect(self._load_data)
 
+        self.sub_mode.currentTextChanged.connect(self._update_subquery_ui)
+        self._update_subquery_ui(self.sub_mode.currentText())
+
         sub_widget = QWidget()
-        sb = QHBoxLayout(sub_widget)
-        sb.addWidget(QLabel("Поле:"))
-        sb.addWidget(self.sub_left_col)
-        sb.addWidget(self.sub_operator)
-        sb.addWidget(self.sub_mode)
-        sb.addWidget(QLabel("Таблица:"))
-        sb.addWidget(self.sub_table)
-        sb.addWidget(self.sub_right_col)
-        sb.addWidget(self.sub_where)
-        sb.addWidget(self.btn_apply_sub)
+        sb = QVBoxLayout(sub_widget)
+
+        row1 = QHBoxLayout()
+        row1.addWidget(QLabel("Поле в основном запросе:"))
+        row1.addWidget(self.sub_left_col)
+        row1.addWidget(self.sub_operator)
+        row1.addWidget(self.sub_mode)
+        sb.addLayout(row1)
+
+        row2 = QHBoxLayout()
+        row2.addWidget(QLabel("Таблица подзапроса:"))
+        row2.addWidget(self.sub_table)
+        row2.addWidget(QLabel("Поле в подзапросе:"))
+        row2.addWidget(self.sub_right_col)
+        sb.addLayout(row2)
+
+        row3 = QHBoxLayout()
+        row3.addWidget(QLabel("WHERE в подзапросе:"))
+        row3.addWidget(self.sub_where)
+        row3.addWidget(self.btn_apply_sub)
+        sb.addLayout(row3)
 
         sub_section = CollapsibleSection("Подзапросы ANY / ALL / EXISTS", sub_widget)
         filters_layout.addWidget(sub_section)
@@ -1416,6 +1442,20 @@ class DataWindow(QMainWindow):
         self.sub_right_col.clear()
         self.sub_right_col.addItems(cols)
 
+    def _update_subquery_ui(self, mode: str):
+        mode = (mode or "").upper()
+
+        is_any_all = mode in ("ANY", "ALL")
+        is_exists = mode in ("EXISTS", "NOT EXISTS")
+        has_mode = bool(mode)
+
+        self.sub_left_col.setEnabled(is_any_all)
+        self.sub_operator.setEnabled(is_any_all)
+        self.sub_right_col.setEnabled(is_any_all)
+
+        self.sub_table.setEnabled(has_mode)
+        self.sub_where.setEnabled(has_mode)
+
     # ---------------------------------------------------------
     # Строковые выражения для SELECT
 
@@ -1845,30 +1885,37 @@ class DataWindow(QMainWindow):
 
             where_clauses.append(cond)
 
-        # подзапрос
-        mode = self.sub_mode.currentText()
-        if mode:
-            left = self.sub_left_col.currentText()
-            right_col = self.sub_right_col.currentText()
-            table = self.sub_table.currentText()
-            op = self.sub_operator.currentText()
-
-            sub_sql = f"(SELECT {right_col} FROM {table}"
-            if self.sub_where.text().strip():
-                sub_sql += f" WHERE {self.sub_where.text().strip()}"
-            sub_sql += ")"
-
-            if mode == "EXISTS":
-                cond = f"EXISTS {sub_sql}"
-            elif mode == "NOT EXISTS":
-                cond = f"NOT EXISTS {sub_sql}"
-            elif mode in ("ANY", "ALL"):
-                cond = f"{left} {op} {mode} {sub_sql}"
-            else:
+            # подзапрос ANY / ALL / EXISTS
+            mode = (self.sub_mode.currentText() or "").strip().upper()
+            if mode:
+                table = (self.sub_table.currentText() or "").strip()
+                where_expr = self.sub_where.currentText().strip()
                 cond = ""
 
-            if cond:
-                where_clauses.append(cond)
+                if mode in ("EXISTS", "NOT EXISTS"):
+                    # EXISTS (SELECT 1 FROM table [WHERE ...])
+                    if table:
+                        sub_sql = f"(SELECT 1 FROM {table}"
+                        if where_expr:
+                            sub_sql += f" WHERE {where_expr}"
+                        sub_sql += ")"
+                        cond = f"{mode} {sub_sql}"
+
+                elif mode in ("ANY", "ALL"):
+                    # left op ANY/ALL (SELECT right_col FROM table [WHERE ...])
+                    left = (self.sub_left_col.currentText() or "").strip()
+                    right_col = (self.sub_right_col.currentText() or "").strip()
+                    op = (self.sub_operator.currentText() or "=").strip()
+
+                    if left and right_col and table:
+                        sub_sql = f"(SELECT {right_col} FROM {table}"
+                        if where_expr:
+                            sub_sql += f" WHERE {where_expr}"
+                        sub_sql += ")"
+                        cond = f"{left} {op} {mode} {sub_sql}"
+
+                if cond:
+                    where_clauses.append(cond)
 
         if where_clauses:
             q += " WHERE " + " AND ".join(where_clauses)
